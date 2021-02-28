@@ -349,7 +349,11 @@ Browser::Browser(gawl::Application& app) : gawl::Window(app), temporary_director
                     w = hitomi::Work(next);
                     w.download_info();
                 }
-                std::string savepath = temporary_directory + "/" + std::to_string(next) + " " + replace_illeggal_chara(w.get_display_name()) + "/";
+                std::string savedir = std::to_string(next);
+                if(std::string workname = savedir + " " + replace_illeggal_chara(w.get_display_name()); workname.size() < 256) {
+                    savedir = workname; 
+                }
+                std::string savepath = temporary_directory + "/" + savedir;
                 {
                     std::lock_guard<std::mutex> lock(download_progress.mutex);
                     download_progress.data[next].first = savepath;

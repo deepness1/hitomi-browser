@@ -1,4 +1,4 @@
-#include <fmt/core.h>
+#include <string>
 #include <fstream>
 #include <stdexcept>
 
@@ -24,7 +24,20 @@ bool Image::download(const char* path, bool webp) {
     if(!buffer.has_value()) {
         return false;
     }
-    std::string filepath = path + (webp ? name.substr(0, name.find(".")) + ".webp" : name);
+
+    std::string base;
+    std::string ext;
+    if(auto p = name.find("."); p != std::string::npos) {
+        base = name.substr(0, p);
+        ext = webp ? ".webp" : name.substr(p + 1);
+    } else {
+        base = std::to_string(id);
+    }
+    if(base.size() + ext.size() >= 256) {
+        base = std::to_string(id);
+        ext = "";
+    }
+    const std::string filepath = std::string(path) + "/" + base + ext;
     std::ofstream file(filepath, std::ios::out | std::ios::binary);
     file.write(buffer.value().data(), buffer.value().size());
     return true;
