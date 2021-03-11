@@ -28,7 +28,7 @@ bool Image::download(const char* path, bool webp) {
     std::string ext;
     if(auto p = name.find("."); p != std::string::npos) {
         base = name.substr(0, p);
-        ext  = webp ? ".webp" : name.substr(p + 1);
+        ext  = webp ? ".webp" : name.substr(p);
     } else {
         base = std::to_string(id);
     }
