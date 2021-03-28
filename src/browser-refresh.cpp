@@ -1,3 +1,5 @@
+#include <sstream>
+
 #include <fmt/core.h>
 #include <fmt/format.h>
 
@@ -87,7 +89,7 @@ void Browser::refresh_callback() {
                 thumbnail_bottom = layout_type == 0 ? fit_area[3] : fit_area[2];
             }
             if(work != nullptr) {
-                auto make_display_info = [](std::vector<std::string> const& src, const char* prefix) -> std::string {
+                auto make_display_info = [](const std::vector<std::string>& src, const char* prefix) -> std::string {
                     if(src.empty()) {
                         return std::string();
                     }
@@ -100,17 +102,28 @@ void Browser::refresh_callback() {
                     }
                     return ret;
                 };
-                auto        artists  = make_display_info(work->get_artists(), "artists: ");
-                auto        groups   = make_display_info(work->get_groups(), "groups: ");
-                auto        type     = work->get_type();
-                auto        series   = make_display_info(work->get_series(), "series: ");
-                auto        tags     = make_display_info(work->get_tags(), "tags: ");
-                auto        language = work->get_language();
-                std::string date_page;
+                std::stringstream work_info;
                 {
                     auto t    = work->get_date();
-                    date_page = std::string(t.begin(), t.begin() + 10);
-                    date_page += fmt::format(" ({} pages)", work->get_pages());
+                    work_info << t.substr(0, 10) << fmt::format(" ({} pages)", work->get_pages());
+                }
+                if(const auto info = make_display_info(work->get_artists(), "artists: "); !info.empty()) {
+                    work_info << "\\n" << info;
+                }
+                if(const auto& language = work->get_language(); !language.empty()) {
+                    work_info << "\\nlanguage: " << language;
+                }
+                if(const auto info = make_display_info(work->get_groups(), "groups: "); !info.empty()) {
+                    work_info << "\\n" << info;
+                }
+                if(const auto& type = work->get_type(); !type.empty()) {
+                    work_info << "\\ntype: " << type;
+                }
+                if(const auto info = make_display_info(work->get_series(), "series: "); !info.empty()) {
+                    work_info << "\\n" << info;
+                }
+                if(const auto info = make_display_info(work->get_tags(), "tags: "); !info.empty()) {
+                    work_info << "\\n" << info;
                 }
 
                 gawl::Area info_area = {
@@ -118,67 +131,7 @@ void Browser::refresh_callback() {
                     layout_type == 0 ? thumbnail_bottom : layout[1][1],
                     layout[1][2], layout[1][3]};
 
-                int           line        = 0;
-                int           total_line  = 0;
-                constexpr int line_height = 24;
-                double        left_over   = 0;
-                auto          draw_func   = [&](size_t /* index */, gawl::Area const& char_area, gawl::GraphicBase& chara) -> bool {
-                    gawl::Area area;
-                    while(1) {
-                        area[1] = char_area[1] + (line + total_line) * line_height;
-                        area[3] = area[1] + (char_area[3] - char_area[1]);
-                        if(area[1] > info_area[3]) {
-                            return true;
-                        }
-                        double delta = preview_area_size[0] * line - left_over;
-                        if(char_area[0] - info_area[0] < delta) {
-                            left_over = delta - (char_area[0] - info_area[0]);
-                            delta     = preview_area_size[0] * line - left_over;
-                        }
-                        area[0] = char_area[0] - delta;
-                        area[2] = char_area[2] - delta;
-                        if(area[2] > info_area[2]) {
-                            line++;
-                            left_over = 0;
-                            continue;
-                        }
-                        break;
-                    }
-                    chara.draw_rect(this, area);
-                    return true;
-                };
-                auto next_line = [&line, &total_line, &left_over]() {
-                    total_line += line + 1;
-                    line      = 0;
-                    left_over = 0;
-                };
-                auto draw_block = [&](const char* str) {
-                    next_line();
-                    work_info_font.draw_fit_rect(this, info_area, Color::white, str, gawl::Align::left, gawl::Align::left, draw_func);
-                };
-                work_info_font.draw_fit_rect(this, info_area, Color::white, date_page.data(), gawl::Align::left, gawl::Align::left, draw_func);
-                if(!language.empty()) {
-                    std::string tmp = "language: ";
-                    tmp += language.data();
-                    draw_block(tmp.data());
-                }
-                if(!artists.empty()) {
-                    draw_block(artists.data());
-                }
-                if(!series.empty()) {
-                    draw_block(series.data());
-                }
-                if(!type.empty()) {
-                    std::string tmp = "type: ";
-                    tmp += type.data();
-                    draw_block(tmp.data());
-                }
-                if(!groups.empty()) {
-                    draw_block(groups.data());
-                }
-                if(!tags.empty()) {
-                    draw_block(tags.data());
-                }
+                work_info_font.draw_wrapped(this, info_area, 24, Color::white, work_info.str().data(), gawl::Align::left, gawl::Align::left);
             }
         }
     }

@@ -8,10 +8,17 @@
 namespace gawl {
 struct Area {
     std::array<double, 4> data;
+
     void magnify(const double scale) {
         for(auto& p : data) {
             p *= scale;
         }
+    }
+    double width() const {
+        return data[2] - data[0];
+    }
+    double height() const {
+        return data[3] - data[1];
     }
     double operator[](size_t i) const {
         return data[i];
@@ -38,15 +45,20 @@ enum class Align {
 };
 template <typename T>
 struct SafeVar {
-    std::mutex mutex;
-    T          data;
-    void       store(T src) {
+    mutable std::mutex mutex;
+    T                  data;
+
+    void store(T src) {
         std::lock_guard<std::mutex> lock(mutex);
         data = src;
     }
-    T load() {
+    T load() const {
         std::lock_guard<std::mutex> lock(mutex);
         return data;
+    }
+    SafeVar& operator=(const SafeVar<T>& other) {
+        data = other.data;
+        return *this;
     }
     SafeVar(T src) : data(src) {}
     SafeVar() {}

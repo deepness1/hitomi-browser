@@ -87,52 +87,66 @@ PixelBuffer::PixelBuffer(std::vector<char>& buffer) {
 // ====== GraphicData ====== //
 class GraphicData : public GraphicBase {
   public:
-    GraphicData(const PixelBuffer& buffer);
-    GraphicData(const PixelBuffer&& buffer);
+    GraphicData(const PixelBuffer& buffer, std::optional<std::array<int, 4>> crop);
+    GraphicData(const PixelBuffer&& buffer, std::optional<std::array<int, 4>> crop);
     ~GraphicData() {}
 };
 
-GraphicData::GraphicData(const PixelBuffer& buffer) : GraphicData(std::move(buffer)) {}
-GraphicData::GraphicData(const PixelBuffer&& buffer) : GraphicBase(*global->graphic_shader) {
+GraphicData::GraphicData(const PixelBuffer& buffer, std::optional<std::array<int, 4>> crop) : GraphicData(std::move(buffer), crop) {}
+GraphicData::GraphicData(const PixelBuffer&& buffer, std::optional<std::array<int, 4>> crop) : GraphicBase(*global->graphic_shader) {
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-    width  = buffer.get_width();
-    height = buffer.get_height();
+    if(crop) {
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, crop.value()[0]);
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, crop.value()[1]);
+    } else {
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+    }
+    width  = crop ? crop.value()[2] : buffer.get_width();
+    height = crop ? crop.value()[3] : buffer.get_height();
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, buffer.get_width());
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer.get_buffer());
 }
 
 // ====== Graphic ====== //
-int Graphic::get_width(const GawlWindow* window) const {
+int Graphic::get_width(FrameBufferInfo info) const {
     if(!graphic_data) {
         return 0;
     }
-    return reinterpret_cast<GraphicData*>(graphic_data.get())->get_width(window);
+    return reinterpret_cast<GraphicData*>(graphic_data.get())->get_width(info);
 }
-int Graphic::get_height(const GawlWindow* window) const {
+int Graphic::get_height(FrameBufferInfo info) const {
     if(!graphic_data) {
         return 0;
     }
-    return reinterpret_cast<GraphicData*>(graphic_data.get())->get_height(window);
+    return reinterpret_cast<GraphicData*>(graphic_data.get())->get_height(info);
 }
-void Graphic::draw(const GawlWindow* window, double x, double y) {
+void Graphic::draw(FrameBufferInfo info, double x, double y) {
     if(!graphic_data) {
         return;
     }
-    reinterpret_cast<GraphicData*>(graphic_data.get())->draw(window, x, y);
+    reinterpret_cast<GraphicData*>(graphic_data.get())->draw(info, x, y);
 }
-void Graphic::draw_rect(const GawlWindow* window, Area area) {
+void Graphic::draw_rect(FrameBufferInfo info, Area area) {
     if(!graphic_data) {
         return;
     }
-    graphic_data.get()->draw_rect(window, area);
+    graphic_data.get()->draw_rect(info, area);
 }
-void Graphic::draw_fit_rect(const GawlWindow* window, Area area) {
+void Graphic::draw_fit_rect(FrameBufferInfo info, Area area) {
     if(!graphic_data) {
         return;
     }
-    graphic_data.get()->draw_fit_rect(window, area);
+    graphic_data.get()->draw_fit_rect(info, area);
 }
 void Graphic::clear() {
     *this = Graphic();
+}
+Graphic::operator GraphicBase*() const {
+    return graphic_data.get();
+}
+Graphic::operator bool() const {
+    return static_cast<bool>(graphic_data);
 }
 Graphic::Graphic(const Graphic& src) {
     *this = src;
@@ -148,34 +162,31 @@ Graphic& Graphic::operator=(Graphic&& src) {
     this->graphic_data = src.graphic_data;
     return *this;
 }
-Graphic::Graphic(const char* file, GraphicLoader loader) {
+Graphic::Graphic(const char* file, GraphicLoader loader, std::optional<std::array<int, 4>> crop) {
     GraphicData* data;
     try {
-        data = new GraphicData(PixelBuffer(file, loader));
+        data = new GraphicData(PixelBuffer(file, loader), crop);
     } catch(std::exception&) {
         std::cout << file << " is not valid image file." << std::endl;
         return;
     }
     graphic_data.reset(data);
 }
-Graphic::Graphic(std::vector<char>& buffer) {
+Graphic::Graphic(std::vector<char>& buffer, std::optional<std::array<int, 4>> crop) {
     GraphicData* data;
     try {
-        data = new GraphicData(PixelBuffer(buffer));
+        data = new GraphicData(PixelBuffer(buffer), crop);
     } catch(std::exception&) {
         std::cout << "invalid buffer." << std::endl;
         return;
     }
     graphic_data.reset(data);
 }
-Graphic::Graphic(const PixelBuffer& buffer) {
-    graphic_data.reset(new GraphicData(buffer));
+Graphic::Graphic(const PixelBuffer& buffer, std::optional<std::array<int, 4>> crop) {
+    graphic_data.reset(new GraphicData(buffer, crop));
 }
-Graphic::Graphic(const PixelBuffer&& buffer) {
-    graphic_data.reset(new GraphicData(std::forward<decltype(buffer)>(buffer)));
+Graphic::Graphic(const PixelBuffer&& buffer, std::optional<std::array<int, 4>> crop) {
+    graphic_data.reset(new GraphicData(std::forward<decltype(buffer)>(buffer), crop));
 }
 Graphic::Graphic() {}
-Graphic::operator bool() {
-    return static_cast<bool>(graphic_data);
-}
 } // namespace gawl

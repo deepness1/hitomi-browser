@@ -95,6 +95,7 @@ Character::Character(char32_t code, Faces const& faces) : GraphicBase(*global->t
     offset[1] = face->glyph->bitmap_top;
     advance   = static_cast<int>(face->glyph->advance.x) >> 6;
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, width);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, face->glyph->bitmap.buffer);
 }
 
@@ -165,7 +166,11 @@ Character* TextRender::get_chara_graphic(int size, char32_t c) {
 void TextRender::set_char_color(Color const& color) {
     glUniform4f(glGetUniformLocation(global->textrender_shader->get_shader(), "textColor"), color[0], color[1], color[2], color[3]);
 }
-Area TextRender::draw(const GawlWindow* window, double x, double y, Color const& color, const char* text, DrawFunc func) {
+Area TextRender::draw(FrameBufferInfo info, double x, double y, Color const& color, const char* text, DrawFunc func) {
+    auto uni = convert_utf8_to_unicode32(text);
+    return draw(info, x, y, color, uni.data(), func);
+}
+Area TextRender::draw(FrameBufferInfo info, double x, double y, Color const& color, const char32_t* text, DrawFunc func) {
     if(!data) {
         throw ::std::runtime_error("unititialized font.");
     }
@@ -175,38 +180,41 @@ Area TextRender::draw(const GawlWindow* window, double x, double y, Color const&
         glUseProgram(global->textrender_shader->get_shader());
         set_char_color(color);
     };
-    auto   uni         = convert_utf8_to_unicode32(text);
     double xpos        = x;
     Area   drawed_area = {x, y, x, y};
     prep();
-    const auto scale = window->get_scale();
-    for(auto& c : uni) {
-        auto   chara   = get_chara_graphic(data->get_size() * scale, c);
-        double p[2]    = {xpos + chara->offset[0] / scale, y - chara->offset[1] / scale};
-        Area   area    = {p[0], p[1], p[0] + chara->get_width(window), p[1] + chara->get_height(window)};
+    const auto scale = info.get_scale();
+
+    const char32_t* c = text;
+    while(*c != '\0') {
+        auto   chara   = get_chara_graphic(data->get_size() * scale, *c);
+        double p[2]    = {xpos + 1. * chara->offset[0] / scale, y - 1. * chara->offset[1] / scale};
+        Area   area    = {p[0], p[1], p[0] + chara->get_width(info), p[1] + chara->get_height(info)};
         drawed_area[0] = drawed_area[0] < area[0] ? drawed_area[0] : area[0];
         drawed_area[1] = drawed_area[1] < area[1] ? drawed_area[1] : area[1];
         drawed_area[2] = drawed_area[2] > area[2] ? drawed_area[2] : area[2];
         drawed_area[3] = drawed_area[3] > area[3] ? drawed_area[3] : area[3];
         if(func) {
-            auto result = func(&c - uni.data(), area, *chara);
+            auto result = func(c - text, area, *chara);
             if(result) {
                 prep();
             } else {
-                chara->draw_rect(window, area);
+                chara->draw_rect(info, area);
             }
         } else {
-            chara->draw_rect(window, area);
+            chara->draw_rect(info, area);
         }
-        xpos += chara->advance / scale;
+        xpos += 1. * chara->advance / scale;
+        c += 1;
     }
     return drawed_area;
+
 }
-Area TextRender::draw_fit_rect(const GawlWindow* window, Area rect, Color const& color, const char* text, Align alignx, Align aligny, DrawFunc func) {
-    const auto scale = window->get_scale();
+Area TextRender::draw_fit_rect(FrameBufferInfo info, Area rect, Color const& color, const char* text, Align alignx, Align aligny, DrawFunc func) {
+    const auto scale = info.get_scale();
     rect.magnify(scale);
     Area font_area = {0, 0};
-    get_rect(window, font_area, text);
+    get_rect(info, font_area, text);
     font_area.magnify(scale);
     double sw = font_area[2] - font_area[0], sh = font_area[3] - font_area[1];
     double dw = rect[2] - rect[0], dh = rect[3] - rect[1];
@@ -217,9 +225,13 @@ Area TextRender::draw_fit_rect(const GawlWindow* window, Area rect, Color const&
                                                                                              : rect[3] - sh;
     x /= scale;
     y /= scale;
-    return draw(window, x, y, color, text, func);
+    return draw(info, x, y, color, text, func);
 }
-void TextRender::get_rect(const GawlWindow* window, Area& rect, const char* text) {
+void TextRender::get_rect(FrameBufferInfo info, Area& rect, const char* text) {
+    auto       uni        = convert_utf8_to_unicode32(text);
+    get_rect(info, rect, uni.data());
+}
+void TextRender::get_rect(FrameBufferInfo info, Area& rect, const char32_t* text) {
     if(!data) {
         throw ::std::runtime_error("unititialized font.");
     }
@@ -227,21 +239,23 @@ void TextRender::get_rect(const GawlWindow* window, Area& rect, const char* text
     rect[3] = rect[1];
     double rx1, ry1, rx2, ry2;
     rx1 = ry1 = rx2 = ry2 = 0;
-    auto       uni        = convert_utf8_to_unicode32(text);
-    const auto scale      = window->get_scale();
-    for(auto c = uni.begin(); c != uni.end(); ++c) {
+    const auto scale      = info.get_scale();
+    auto c = text;
+    while(*c != '\0') {
         auto   chara   = get_chara_graphic(data->get_size() * scale, *c);
-        double xpos[2] = {static_cast<double>(rx1 + chara->offset[0]), static_cast<double>(rx1 + chara->offset[0] + chara->get_width(window) * scale)};
+        double xpos[2] = {static_cast<double>(rx1 + chara->offset[0]), static_cast<double>(rx1 + chara->offset[0] + chara->get_width(info) * scale)};
 
         rx1 = rx1 > xpos[0] ? xpos[0] : rx1;
         rx2 = rx2 < xpos[1] ? xpos[1] : rx2;
 
-        double ypos[2] = {static_cast<double>(-chara->offset[1]), static_cast<double>(-chara->offset[1] + chara->get_height(window) * scale)};
+        double ypos[2] = {static_cast<double>(-chara->offset[1]), static_cast<double>(-chara->offset[1] + chara->get_height(info) * scale)};
 
         ry1 = ry1 > ypos[0] ? ypos[0] : ry1;
         ry2 = ry2 < ypos[1] ? ypos[1] : ry2;
 
-        if(c + 1 != uni.end()) {
+        c += 1;
+
+        if(*c != '\0') {
             rx2 += chara->advance;
         }
     }
@@ -249,6 +263,73 @@ void TextRender::get_rect(const GawlWindow* window, Area& rect, const char* text
     rect[1] += ry1 / scale;
     rect[2] += rx2 / scale;
     rect[3] += ry2 / scale;
+}
+void TextRender::draw_wrapped(FrameBufferInfo info, Area& rect, int line_spacing, Color const& color, const char* text, Align alignx, Align aligny) {
+    if(!data) {
+        throw ::std::runtime_error("unititialized font.");
+    }
+
+    const auto                  str = convert_utf8_to_unicode32(text);
+    std::vector<std::u32string> lines(1);
+
+    const auto max_width  = rect.width();
+    const auto max_height = rect.height();
+    const auto len        = str.size();
+    for(size_t i = 0; i < len; ++i) {
+        const bool last  = i + 1 == len;
+        char32_t   chara = str[i];
+        if(str[i] == U'\\' && !last) {
+            i += 1;
+            const auto following = str[i];
+            if(following == U'\\') {
+                chara = following;
+            } else {
+                switch(following) {
+                case U'n':
+                    if((lines.size() + 1) * line_spacing > max_height) {
+                        goto draw;
+                    }
+                    lines.emplace_back();
+                    break;
+                }
+                continue;
+            }
+        }
+        lines.back() += chara;
+        Area area = {0, 0};
+        get_rect(info, area, lines.back().data());
+        if(area.width() > max_width) {
+            lines.back().pop_back();
+
+            if((lines.size() + 1) * line_spacing > max_height) {
+                goto draw;
+            }
+            lines.emplace_back(1, chara);
+
+            get_rect(info, area, lines.back().data());
+            if(area.width() > max_width) {
+                lines.pop_back();
+                goto draw;
+            }
+        }
+    }
+
+draw:
+    const size_t total_height = lines.size() * line_spacing;
+    const double y_offset     = aligny == Align::left ? 0 : aligny == Align::right ? max_height - total_height
+                                                                                   : (max_height - total_height) / 2.0;
+    for(size_t i = 0; i < lines.size(); ++i) {
+        const auto& line = lines[i];
+        Area area = {0, 0};
+        get_rect(info, area, line.data());
+        const auto total_width = area.width();
+        const double x_offset = alignx == Align::left ? 0 : alignx == Align::right ? max_width - total_width 
+                                                                                         : (max_width - total_width) / 2.0;
+        draw(info, rect[0] + x_offset, rect[1] + y_offset + i * line_spacing - area[1], color, line.data());
+    }
+}
+TextRender::operator bool() const {
+    return data.get() != nullptr;
 }
 TextRender::TextRender(const std::vector<const char*>&& font_names, int size) {
     std::vector<std::string> fonts;

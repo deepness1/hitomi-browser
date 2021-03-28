@@ -6,6 +6,7 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 
+#include "frame-buffer-info.hpp"
 #include "type.hpp"
 
 namespace gawl {
@@ -32,16 +33,17 @@ class GraphicBase {
     GLuint texture;
 
   protected:
-    Shader&      type_specific;
-    int          width, height;
-    virtual void prepare_shader();
+    Shader& type_specific;
+    int     width, height;
+    bool    invert_top_bottom = false;
+    GLuint  get_texture() const;
 
   public:
-    virtual int get_width(const GawlWindow* window) const;
-    virtual int get_height(const GawlWindow* window) const;
-    void        draw(const GawlWindow* window, double x, double y);
-    void        draw_rect(const GawlWindow* window, Area area);
-    void        draw_fit_rect(const GawlWindow* window, Area area);
+    virtual int get_width(FrameBufferInfo info) const;
+    virtual int get_height(FrameBufferInfo info) const;
+    void        draw(FrameBufferInfo infoconst, double x, double y) const;
+    void        draw_rect(FrameBufferInfo infoconst, Area area) const;
+    void        draw_fit_rect(FrameBufferInfo info, Area area) const;
     GraphicBase(Shader& type_specific);
     virtual ~GraphicBase();
 };

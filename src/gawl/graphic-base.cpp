@@ -1,10 +1,10 @@
 #include <IL/il.h>
 
+#include "gawl-window.hpp"
 #include "global.hpp"
 #include "graphic-base.hpp"
 #include "misc.hpp"
 #include "type.hpp"
-#include "gawl-window.hpp"
 
 namespace gawl {
 extern GlobalVar* global;
@@ -12,16 +12,17 @@ namespace {
 GLuint  ebo;
 GLuint  vbo;
 GLfloat vertices[4][4];
-void    move_vertices(const GawlWindow* window, Area area) {
-    gawl::convert_screen_to_viewport(window, area);
+
+void move_vertices(FrameBufferInfo info, Area area, bool invert) {
+    gawl::convert_screen_to_viewport(info, area);
     vertices[0][0] = area[0];
-    vertices[0][1] = area[1];
+    vertices[0][1] = area[1 + invert * 2];
     vertices[1][0] = area[2];
-    vertices[1][1] = area[1];
+    vertices[1][1] = area[1 + invert * 2];
     vertices[2][0] = area[2];
-    vertices[2][1] = area[3];
+    vertices[2][1] = area[3 - invert * 2];
     vertices[3][0] = area[0];
-    vertices[3][1] = area[3];
+    vertices[3][1] = area[3 - invert * 2];
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
 }
@@ -104,28 +105,29 @@ Shader::~Shader() {
     glDeleteShader(fragment_shader);
     glDeleteShader(vertex_shader);
 }
-void GraphicBase::prepare_shader() {
+GLuint GraphicBase::get_texture() const {
+    return texture;
 }
-int GraphicBase::get_width(const GawlWindow* window) const {
-    return width / window->get_scale();
+int GraphicBase::get_width(FrameBufferInfo info) const {
+    return width / info.get_scale();
 }
-int GraphicBase::get_height(const GawlWindow* window) const {
-    return height / window->get_scale();
+int GraphicBase::get_height(FrameBufferInfo info) const {
+    return height / info.get_scale();
 }
-void GraphicBase::draw(const GawlWindow* window, double x, double y) {
-    draw_rect(window, {x, y, x + width, y + height});
+void GraphicBase::draw(FrameBufferInfo info, double x, double y) const {
+    draw_rect(info, {x, y, x + width, y + height});
 }
-void GraphicBase::draw_rect(const GawlWindow* window, Area area) {
-    area.magnify(window->get_scale());
-    move_vertices(window, area);
+void GraphicBase::draw_rect(FrameBufferInfo info, Area area) const {
+    area.magnify(info.get_scale());
+    move_vertices(info, area, invert_top_bottom);
     type_specific.bind_vao();
+    info.prepare();
     glUseProgram(type_specific.get_shader());
-    prepare_shader();
     glBindTexture(GL_TEXTURE_2D, texture);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
-void GraphicBase::draw_fit_rect(const GawlWindow* window, Area area) {
-    draw_rect(window, calc_fit_rect(area, width, height));
+void GraphicBase::draw_fit_rect(FrameBufferInfo info, Area area) const {
+    draw_rect(info, calc_fit_rect(area, width, height));
 }
 GraphicBase::GraphicBase(Shader& type_specific) : type_specific(type_specific) {
     glGenTextures(1, &texture);

@@ -12,6 +12,7 @@ class WaylandApplication : public GawlApplication {
   private:
     wayland::display_t display;
     pollfd             fds[3];
+    bool               quitted = false;
     bool               running = false;
 
     SafeVar<std::vector<WaylandWindow*>> to_handle;

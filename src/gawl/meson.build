@@ -17,6 +17,8 @@ devil_dep = dependency('IL')
 gawl_inc = [freetype_inc, magick_inc]
 gawl_dep = [wl_deps, egl_deps, freetype_dep, thread_dep, magick_dep, devil_dep]
 gawl_files = files(
+    'empty-texture.cpp',
+    'frame-buffer-info.cpp',
     'gawl-application.cpp',
     'gawl-window.cpp',
     'graphic-base.cpp',

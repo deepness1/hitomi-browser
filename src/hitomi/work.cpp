@@ -115,28 +115,28 @@ std::optional<std::vector<char>> Work::get_thumbnail() {
     }
     return download_binary(images[0].get_thumbnail_url().data());
 }
-std::string Work::get_language() const noexcept {
+const std::string& Work::get_language() const noexcept {
     return language;
 }
 uint64_t Work::get_pages() const noexcept {
     return images.size();
 }
-std::string Work::get_date() const noexcept {
+const std::string& Work::get_date() const noexcept {
     return date;
 }
-std::vector<std::string> Work::get_tags() const noexcept {
+const std::vector<std::string>& Work::get_tags() const noexcept {
     return tags;
 }
-std::vector<std::string> Work::get_artists() const noexcept {
+const std::vector<std::string>& Work::get_artists() const noexcept {
     return artists;
 }
-std::vector<std::string> Work::get_groups() const noexcept {
+const std::vector<std::string>& Work::get_groups() const noexcept {
     return groups;
 }
-std::string Work::get_type() const noexcept {
+const std::string& Work::get_type() const noexcept {
     return type;
 }
-std::vector<std::string> Work::get_series() const noexcept {
+const std::vector<std::string>& Work::get_series() const noexcept {
     return series;
 }
 bool Work::start_download(const char* savedir, uint64_t threads, bool webp, std::function<bool(uint64_t)> callback) {

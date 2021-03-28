@@ -2,6 +2,7 @@
 #include <memory>
 #include <vector>
 
+#include "frame-buffer-info.hpp"
 #include "type.hpp"
 
 namespace gawl {
@@ -10,8 +11,8 @@ enum class GraphicLoader {
     DEVIL,
 };
 
+class GraphicBase;
 class GraphicData;
-
 class GawlWindow;
 
 class PixelBuffer {
@@ -37,21 +38,22 @@ class Graphic {
     std::shared_ptr<GraphicData> graphic_data;
 
   public:
-    int  get_width(const GawlWindow* window) const;
-    int  get_height(const GawlWindow* window) const;
-    void draw(const GawlWindow* window, double x, double y);
-    void draw_rect(const GawlWindow* window, Area area);
-    void draw_fit_rect(const GawlWindow* window, Area area);
+    int  get_width(FrameBufferInfo info) const;
+    int  get_height(FrameBufferInfo info) const;
+    void draw(FrameBufferInfo info, double x, double y);
+    void draw_rect(FrameBufferInfo info, Area area);
+    void draw_fit_rect(FrameBufferInfo info, Area area);
     void clear();
-         operator bool();
+         operator GraphicBase*() const;
+         operator bool() const;
     Graphic(const Graphic&);
     Graphic(Graphic&&);
     Graphic& operator=(const Graphic&);
     Graphic& operator=(Graphic&&);
     Graphic();
-    Graphic(const char* file, GraphicLoader loader = GraphicLoader::IMAGEMAGICK);
-    Graphic(std::vector<char>& buffer);
-    Graphic(const PixelBuffer& buffer);
-    Graphic(const PixelBuffer&& buffer);
+    Graphic(const char* file, GraphicLoader loader = GraphicLoader::IMAGEMAGICK, std::optional<std::array<int, 4>> crop = std::nullopt);
+    Graphic(std::vector<char>& buffer, std::optional<std::array<int, 4>> crop = std::nullopt);
+    Graphic(const PixelBuffer& buffer, std::optional<std::array<int, 4>> crop = std::nullopt);
+    Graphic(const PixelBuffer&& buffer, std::optional<std::array<int, 4>> crop = std::nullopt);
 };
 } // namespace gawl

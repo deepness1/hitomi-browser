@@ -18,10 +18,12 @@ void WaylandApplication::tell_event(GawlWindow* window) {
 }
 void WaylandApplication::run() {
     running = true;
-    for(auto& w : get_windows()) {
-        w->refresh();
+    if(!quitted) {
+        for(auto& w : get_windows()) {
+            w->refresh();
+        }
     }
-    while(running) {
+    while(!quitted) {
         auto read_intent = display.obtain_read_intent();
         display.flush();
         poll(fds, 3, -1);
@@ -59,10 +61,11 @@ void WaylandApplication::run() {
         }
         display.dispatch_pending();
     }
+    running = false;
     close_all_windows();
 }
 void WaylandApplication::quit() {
-    running                   = false;
+    quitted                   = true;
     const static size_t count = 1;
     write(fds[2].fd, &count, sizeof(count));
 }
