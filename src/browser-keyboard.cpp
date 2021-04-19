@@ -275,7 +275,32 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
         break;
     case CREATE_SEARCH_TAB:
         if(!input_result) {
-            if(state == gawl::ButtonState::press) {
+            if(state != gawl::ButtonState::press) {
+                break;
+            }
+            if(shift) {
+                std::string artist;
+                do {
+                    auto const p = get_current_work();
+                    if(p == nullptr) {
+                        break;
+                    }
+                    hitomi::GalleryID id = *p;
+                    std::lock_guard<std::mutex> lock(cache.mutex);
+                    if(auto w = cache.data.find(id); w != cache.data.end()) {
+                        if(!w->second) {
+                            break;
+                        }
+                        const auto& artists = w->second->work.get_artists();
+                        if(artists.empty()) {
+                            break;
+                        }
+                        artist = "-a ";
+                        artist += artists[0];
+                    }
+                } while(0);
+                input(key, "search: ", artist.data());
+            } else {
                 input(key, "search: ");
             }
         } else {
@@ -526,7 +551,6 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
                     break;
                 }
                 p->title = std::move(input_buffer);
-
             }
         }
         do_refresh = true;
