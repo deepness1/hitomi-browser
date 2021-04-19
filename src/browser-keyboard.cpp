@@ -84,6 +84,7 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
     constexpr auto TOGGLE_LAYOUT     = KEY_W;
     constexpr auto LAYOUT_MOVE_PLUS  = KEY_R;
     constexpr auto LAYOUT_MOVE_MINUS = KEY_E;
+    constexpr auto RENAME            = KEY_F2;
     constexpr auto RESEARCH          = KEY_F5;
 
     switch(key) {
@@ -501,6 +502,34 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
             }
             do_refresh = true;
         }
+        break;
+    case RENAME:
+        if(!input_result) {
+            if(state != gawl::ButtonState::press) {
+                break;
+            }
+            std::string title;
+            {
+                std::lock_guard<std::mutex> lock(tabs.mutex);
+                auto                        p = tabs.data.current();
+                if(p == nullptr) {
+                    break;
+                }
+                title = p->title;
+            }
+            input(key, "rename: ", title.data());
+        } else {
+            {
+                std::lock_guard<std::mutex> lock(tabs.mutex);
+                auto                        p = tabs.data.current();
+                if(p == nullptr) {
+                    break;
+                }
+                p->title = std::move(input_buffer);
+
+            }
+        }
+        do_refresh = true;
         break;
     case RESEARCH:
         if(state != gawl::ButtonState::press) {

@@ -169,11 +169,15 @@ void Browser::show_message(const char* ptr) {
         }
     });
 }
-void Browser::input(uint32_t key, const char* prompt) {
+void Browser::input(uint32_t key, const char* prompt, const char* const init) {
     input_key    = key;
     input_prompt = prompt;
-    input_buffer.clear();
     input_cursor = 0;
+    if(init == nullptr) {
+        input_buffer.clear();
+    } else {
+        input_buffer = init;
+    }
     if(key_press_count > 0) {
         key_press_count = 0;
         adjust_cache();

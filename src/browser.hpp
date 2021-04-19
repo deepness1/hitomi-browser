@@ -65,7 +65,7 @@ class Browser : public gawl::WaylandWindow {
     gawl::Graphic             get_thumbnail(hitomi::GalleryID id);
     hitomi::GalleryID*        get_current_work();
     void                      show_message(const char* message);
-    void                      input(uint32_t key, const char* prompt);
+    void                      input(uint32_t key, const char* prompt, const char* const init = nullptr);
     void                      search(std::string arg);
     void                      download(hitomi::GalleryID id);
     void                      cancel_download(hitomi::GalleryID id);
