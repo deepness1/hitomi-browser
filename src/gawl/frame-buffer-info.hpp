@@ -15,7 +15,8 @@ class FrameBufferInfo {
     std::array<size_t, 2> get_size() const;
     void                  prepare();
     FrameBufferInfo(const GawlWindow* window);
-    FrameBufferInfo(const EmptyTexture* texture);
+    FrameBufferInfo(const EmptyTexture& texture);
+    FrameBufferInfo(std::nullptr_t null);
     FrameBufferInfo(const FrameBufferInfo& other);
 };
 } // namespace gawl

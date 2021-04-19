@@ -94,13 +94,15 @@ Character::Character(char32_t code, Faces const& faces) : GraphicBase(*global->t
     offset[0] = face->glyph->bitmap_left;
     offset[1] = face->glyph->bitmap_top;
     advance   = static_cast<int>(face->glyph->advance.x) >> 6;
+    glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+    glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, width);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, face->glyph->bitmap.buffer);
 }
 
 struct CharacterCache {
-    using Map = std::map<char32_t, Character*>;
+    using Map = std::unordered_map<char32_t, Character*>;
     Faces      faces;
     Map        cache;
     Character* get_character(char32_t c) {

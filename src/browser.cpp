@@ -7,8 +7,8 @@
 #include <mutex>
 #include <string>
 
-#include <bits/stdint-uintn.h>
 #include <bits/stdint-intn.h>
+#include <bits/stdint-uintn.h>
 #include <linux/input-event-codes.h>
 
 #include "browser.hpp"
@@ -27,11 +27,11 @@ struct SaveData {
 };
 std::string replace_illeggal_chara(std::string const& str) {
     constexpr std::array illegal_charas = {'/'};
-    std::string ret;
+    std::string          ret;
     for(auto c : str) {
         char n;
         if(auto p = std::find(illegal_charas.begin(), illegal_charas.end(), c); p != illegal_charas.end()) {
-            n = ' '; 
+            n = ' ';
         } else {
             n = c;
         }
@@ -39,7 +39,7 @@ std::string replace_illeggal_chara(std::string const& str) {
     }
     return ret;
 }
-}
+} // namespace
 
 void Browser::adjust_cache() {
     std::vector<hitomi::GalleryID> visible;
@@ -189,12 +189,13 @@ void Browser::search(std::string arg) {
         {
             std::lock_guard<std::mutex> lock(tabs.mutex);
             for(auto& t : tabs.data) {
-                if(t.searching) {
-                    t.title = arg;
-                    t.set(result);
-                    t.searching = false;
-                    break;
+                if(!t.searching) {
+                    continue;
                 }
+                t.title     = arg;
+                t.searching = false;
+                t.set_retrieve(std::move(result));
+                break;
             }
         }
         adjust_cache();
@@ -287,7 +288,7 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app), tempora
                         // check if the id is still in visible range.
                         std::lock_guard<std::mutex> lock(tabs.mutex);
                         for(auto& tab : tabs.data) {
-                            auto  range = calc_visible_range(tab);
+                            auto range = calc_visible_range(tab);
                             for(int64_t i = range[0]; i <= range[1]; ++i) {
                                 if(*tab[i] == id) {
                                     return true;
@@ -352,7 +353,7 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app), tempora
                 }
                 std::string savedir = std::to_string(next);
                 if(std::string workname = savedir + " " + replace_illeggal_chara(w.get_display_name()); workname.size() < 256) {
-                    savedir = workname; 
+                    savedir = workname;
                 }
                 std::string savepath = temporary_directory + "/" + savedir;
                 {

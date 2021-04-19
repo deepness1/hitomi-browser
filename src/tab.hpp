@@ -1,6 +1,5 @@
 #pragma once
 #include <vector>
-#include <fstream>
 
 #include "hitomi/hitomi.hpp"
 
@@ -27,10 +26,7 @@ class IndexData {
         }
     }
     void append(T& n) {
-        data.emplace_back(std::move(n));
-        if(index == -1) {
-            index = 0;
-        }
+        append(std::move(n));
     }
     void append(std::vector<T>& n) {
         if(n.empty()) return;
@@ -63,6 +59,9 @@ class IndexData {
     }
     bool valid_index(int64_t i) const noexcept {
         return i >= 0 && i <= index_limit();
+    }
+    int64_t size() const noexcept {
+        return data.size();
     }
     int64_t index_limit() const noexcept {
         return data.size() - 1;
@@ -108,121 +107,28 @@ class IndexData {
         return true;
     }
 };
+
 struct Tab : public IndexData<hitomi::GalleryID> {
   private:
-    void reset_order() {
-        std::sort(data.begin(), data.end(), std::greater<hitomi::GalleryID>());
-        data.erase(std::unique(data.begin(), data.end()), data.end());
-    }
-    bool search_and_set_index(hitomi::GalleryID i) {
-        auto p = std::find(data.begin(), data.end(), i);
-        if(p != data.end()) {
-            index = std::distance(data.begin(), p);
-            return true;
-        }
-        return false;
-    }
+    bool search_and_set_index(hitomi::GalleryID i);
 
   public:
     std::string title;
     TabType     type;
     bool        searching = false;
 
-    void append(hitomi::GalleryID t) {
-        hitomi::GalleryID current = -1;
-        if(valid_index(index)) {
-            current = data[index];
-        }
-        IndexData<hitomi::GalleryID>::append(t);
-        reset_order();
-        if(current != static_cast<hitomi::GalleryID>(-1)) {
-            search_and_set_index(current);
-        }
-    }
-    void append(std::vector<hitomi::GalleryID>& t) {
-        hitomi::GalleryID current = -1;
-        if(valid_index(index)) {
-            current = data[index];
-        }
-        IndexData<hitomi::GalleryID>::append(t);
-        reset_order();
-        if(current != static_cast<hitomi::GalleryID>(-1)) {
-            search_and_set_index(current);
-        }
-    }
-    void set(std::vector<hitomi::GalleryID>& t) {
-        hitomi::GalleryID current = -1;
-        if(valid_index(index)) {
-            current = data[index];
-        }
-        data = std::move(t);
-        if(current != static_cast<hitomi::GalleryID>(-1)) {
-            search_and_set_index(current);
-        }
-        if(!valid_index(index)) {
-            if(data.empty()) {
-                index = -1;
-            } else {
-                index = 0;
-            }
-        }
-    }
-    void dump(std::ofstream& file) {
-        // title
-        size_t ltitle = title.size();
-        file.write(reinterpret_cast<char*>(&ltitle), (std::streamsize)sizeof(ltitle));
-        file.write(reinterpret_cast<char*>(title.data()), ltitle);
-        // type
-        file.write(reinterpret_cast<char*>(&type), sizeof(type));
-        if(type != TabType::reading) {
-            // ids
-            size_t ndata = data.size();
-            file.write(reinterpret_cast<char*>(&ndata), sizeof(ndata));
-            file.write(reinterpret_cast<char*>(&index), sizeof(index));
-            if(!data.empty()) {
-                file.write(reinterpret_cast<char*>(data.data()), data.size() * sizeof(hitomi::GalleryID));
-            }
-        }
-    }
-    void load(std::ifstream& file) {
-        // title
-        size_t ltitle;
-        file.read(reinterpret_cast<char*>(&ltitle), sizeof(ltitle));
-        title.resize(ltitle);
-        file.read(reinterpret_cast<char*>(title.data()), ltitle);
-        // type
-        file.read(reinterpret_cast<char*>(&type), sizeof(type));
-        if(type != TabType::reading) {
-            // ids
-            size_t ndata;
-            file.read(reinterpret_cast<char*>(&ndata), sizeof(ndata));
-            file.read(reinterpret_cast<char*>(&index), sizeof(index));
-            if(ndata != 0) {
-                data.resize(ndata);
-                file.read(reinterpret_cast<char*>(data.data()), ndata * sizeof(hitomi::GalleryID));
-            }
-        }
-    }
+    void append(hitomi::GalleryID t);
+    void append(std::vector<hitomi::GalleryID>& t);
+    void set_retrieve(std::vector<hitomi::GalleryID>&& ids);
+    void dump(std::ofstream& file);
+    void load(std::ifstream& file);
 };
+
 struct Tabs : public IndexData<Tab> {
-    void dump(std::ofstream& file) {
-        size_t ntabs = data.size();
-        file.write(reinterpret_cast<char*>(&ntabs), sizeof(ntabs));
-        file.write(reinterpret_cast<char*>(&index), sizeof(index));
-        for(auto& t : data) {
-            t.dump(file);
-        }
-    }
-    void load(std::ifstream& file) {
-        size_t ntabs;
-        file.read(reinterpret_cast<char*>(&ntabs), sizeof(ntabs));
-        file.read(reinterpret_cast<char*>(&index), sizeof(index));
-        data.resize(ntabs);
-        for(auto& t : data) {
-            t.load(file);
-        }
-    }
+    void dump(std::ofstream& file);
+    void load(std::ifstream& file);
 };
+
 struct WorkWithThumbnail {
     hitomi::Work      work;
     gawl::Graphic     thumbnail;

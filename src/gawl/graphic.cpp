@@ -96,14 +96,29 @@ GraphicData::GraphicData(const PixelBuffer& buffer, std::optional<std::array<int
 GraphicData::GraphicData(const PixelBuffer&& buffer, std::optional<std::array<int, 4>> crop) : GraphicBase(*global->graphic_shader) {
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
     if(crop) {
+        if((*crop)[0] < 0) {
+            (*crop)[0] += buffer.get_width();
+        }
+        if((*crop)[1] < 0) {
+            (*crop)[1] += buffer.get_height();
+        }
+        if((*crop)[2] < 0) {
+            (*crop)[2] += buffer.get_width();
+        }
+        if((*crop)[3] < 0) {
+            (*crop)[3] += buffer.get_height();
+        }
+    }
+
+    if(crop) {
         glPixelStorei(GL_UNPACK_SKIP_PIXELS, crop.value()[0]);
         glPixelStorei(GL_UNPACK_SKIP_ROWS, crop.value()[1]);
     } else {
         glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
         glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
     }
-    width  = crop ? crop.value()[2] : buffer.get_width();
-    height = crop ? crop.value()[3] : buffer.get_height();
+    width  = crop ? (*crop)[2] : buffer.get_width();
+    height = crop ? (*crop)[3] : buffer.get_height();
     glPixelStorei(GL_UNPACK_ROW_LENGTH, buffer.get_width());
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer.get_buffer());
 }
