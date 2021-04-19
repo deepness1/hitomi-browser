@@ -67,12 +67,12 @@ char keycode_to_char(uint32_t code, bool shift) {
 
 void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
     constexpr auto NEXT_WORK         = KEY_RIGHT;
-    constexpr auto PREV_WORK         = KEY_LEFT;
+    constexpr auto PREV_WORK         = KEY_PAGEDOWN;
     constexpr auto SCALE_UP          = KEY_EQUAL;
     constexpr auto SCALE_DOWN        = KEY_MINUS;
     constexpr auto SCALE_RESET       = KEY_0;
-    constexpr auto NEXT_TAB          = KEY_PAGEDOWN;
-    constexpr auto PREV_TAB          = KEY_PAGEUP;
+    constexpr auto NEXT_TAB          = KEY_DOWN;
+    constexpr auto PREV_TAB          = KEY_UP;
     constexpr auto CREATE_NAMED_TAB  = KEY_N;
     constexpr auto DELETE_TAB        = KEY_X;
     constexpr auto RESTORE_TAB       = KEY_Z;
