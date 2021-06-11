@@ -8,7 +8,7 @@
 constexpr const char* SEARCH_DOMAIN = "ltn.hitomi.la/{}.nozomi";
 namespace hitomi {
 std::vector<hitomi::GalleryID> fetch_ids(const char* url) {
-    auto buffer = download_binary(url, nullptr, nullptr, 15);
+    auto buffer = download_binary(url, nullptr, nullptr, 30);
     if(!buffer) return {};
     size_t                         len = buffer.value().size() / 4;
     Cutter                         arr(buffer.value());

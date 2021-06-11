@@ -52,10 +52,10 @@ Image::Image(GalleryID id, nlohmann::json const& info) : id(id) {
     } catch(const std::invalid_argument&) {
         throw std::runtime_error("invalid hash");
     }
-    if(hash_num < 0x09) {
+    int number_of_frontends = hash_num < 0x80 ? 2 : 3;
+    if(hash_num < 0x59) {
         hash_num = 1;
     }
-    int  number_of_frontends = hash_num < 0x30 ? 2 : 3;
     bool haswebp             = info.contains("haswebp") && (info["haswebp"].get<int>() == 1);
     auto sep                 = name.find(".");
     auto filebase            = name.substr(0, sep);
