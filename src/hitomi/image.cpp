@@ -52,16 +52,14 @@ Image::Image(GalleryID id, nlohmann::json const& info) : id(id) {
     } catch(const std::invalid_argument&) {
         throw std::runtime_error("invalid hash");
     }
-    int number_of_frontends = hash_num < 0x80 ? 2 : 3;
-    if(hash_num < 0x59) {
-        hash_num = 1;
-    }
+    int  number_of_frontends = hash_num < 0x40 ? 2 : hash_num < 0x80 ? 1
+                                                                     : 0;
     bool haswebp             = info.contains("haswebp") && (info["haswebp"].get<int>() == 1);
     auto sep                 = name.find(".");
     auto filebase            = name.substr(0, sep);
     auto fileext             = name.substr(sep);
 
-    std::string subdomain = {static_cast<char>(97 + hash_num % number_of_frontends), 'b'};
+    std::string subdomain = {static_cast<char>(97 + number_of_frontends), 'b'};
     url                   = fmt::format(IMAGE_URL, subdomain, "images", hash_a, hash_b, hash, fileext);
     if(haswebp) {
         subdomain[1] = 'a';
