@@ -22,19 +22,21 @@ class Work {
     std::string              type;
 
   public:
-    bool                             valid() const noexcept;
-    std::string                      get_display_name() const noexcept;
-    bool                             download_info();
-    std::optional<std::vector<char>> get_thumbnail();
-    const std::string&               get_language() const noexcept;
-    uint64_t                         get_pages() const noexcept;
-    const std::string&               get_date() const noexcept;
-    const std::vector<std::string>&  get_tags() const noexcept;
-    const std::vector<std::string>&  get_artists() const noexcept;
-    const std::vector<std::string>&  get_groups() const noexcept;
-    const std::string&               get_type() const noexcept;
-    const std::vector<std::string>&  get_series() const noexcept;
-    bool                             start_download(const char* savedir, uint64_t threads, bool webp, std::function<bool(uint64_t)> callback = nullptr);
+    auto get_id() const -> GalleryID;
+    auto get_display_name() const -> std::string;
+    auto get_thumbnail() -> std::optional<std::vector<uint8_t>>;
+    auto get_language() const -> const std::string&;
+    auto get_pages() const -> uint64_t;
+    auto get_date() const -> const std::string&;
+    auto get_tags() const -> const std::vector<std::string>&;
+    auto get_artists() const -> const std::vector<std::string>&;
+    auto get_groups() const -> const std::vector<std::string>&;
+    auto get_type() const -> const std::string&;
+    auto get_series() const -> const std::vector<std::string>&;
+    auto has_id() const -> bool;
+    auto has_info() const -> bool;
+    auto download_info() -> bool;
+    auto start_download(const char* savedir, uint64_t threads, bool webp, std::function<bool(uint64_t)> callback = nullptr) -> bool;
     Work(GalleryID id);
     Work();
     ~Work();

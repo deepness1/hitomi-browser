@@ -132,7 +132,7 @@ struct Tabs : public IndexData<Tab> {
 struct WorkWithThumbnail {
     hitomi::Work      work;
     gawl::Graphic     thumbnail;
-    std::vector<char> thumbnail_buffer;
+    std::vector<uint8_t> thumbnail_buffer;
     WorkWithThumbnail(hitomi::GalleryID id) : work(id) {
         work.download_info();
         auto buf = work.get_thumbnail();

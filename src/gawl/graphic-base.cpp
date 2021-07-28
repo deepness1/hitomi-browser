@@ -13,7 +13,7 @@ GLuint  ebo;
 GLuint  vbo;
 GLfloat vertices[4][4];
 
-void move_vertices(FrameBufferInfo info, Area area, bool invert) {
+auto move_vertices(FrameBufferInfo info, Area area, bool invert) -> void {
     gawl::convert_screen_to_viewport(info, area);
     vertices[0][0] = area[0];
     vertices[0][1] = area[1 + invert * 2];
@@ -27,7 +27,7 @@ void move_vertices(FrameBufferInfo info, Area area, bool invert) {
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
 }
 } // namespace
-void init_graphics() {
+auto init_graphics() -> void {
     ilInit();
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -49,17 +49,17 @@ void init_graphics() {
     vertices[3][2] = 0.0;
     vertices[3][3] = 1.0;
 }
-void finish_graphics() {
+auto finish_graphics() -> void {
     glDeleteBuffers(1, &ebo);
     glDeleteBuffers(1, &vbo);
 }
-void Shader::bind_vao() {
+auto Shader::bind_vao() -> void {
     glBindVertexArray(vao);
 }
-GLuint Shader::get_shader() {
+auto Shader::get_shader() -> GLuint {
     return shader_program;
 }
-Shader::Shader(const char* vertex_shader_source, const char* fragment_shader_source) {
+Shader::Shader(const char* const vertex_shader_source, const char* const fragment_shader_source) {
     GLint status;
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &vertex_shader_source, NULL);
@@ -105,19 +105,19 @@ Shader::~Shader() {
     glDeleteShader(fragment_shader);
     glDeleteShader(vertex_shader);
 }
-GLuint GraphicBase::get_texture() const {
+auto GraphicBase::get_texture() const -> GLuint {
     return texture;
 }
-int GraphicBase::get_width(FrameBufferInfo info) const {
+auto GraphicBase::get_width(FrameBufferInfo info) const -> int {
     return width / info.get_scale();
 }
-int GraphicBase::get_height(FrameBufferInfo info) const {
+auto GraphicBase::get_height(FrameBufferInfo info) const -> int {
     return height / info.get_scale();
 }
-void GraphicBase::draw(FrameBufferInfo info, double x, double y) const {
+auto GraphicBase::draw(FrameBufferInfo info, double x, double y) const -> void {
     draw_rect(info, {x, y, x + width, y + height});
 }
-void GraphicBase::draw_rect(FrameBufferInfo info, Area area) const {
+auto GraphicBase::draw_rect(FrameBufferInfo info, Area area) const -> void {
     area.magnify(info.get_scale());
     move_vertices(info, area, invert_top_bottom);
     type_specific.bind_vao();
@@ -126,7 +126,7 @@ void GraphicBase::draw_rect(FrameBufferInfo info, Area area) const {
     glBindTexture(GL_TEXTURE_2D, texture);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
-void GraphicBase::draw_fit_rect(FrameBufferInfo info, Area area) const {
+auto GraphicBase::draw_fit_rect(FrameBufferInfo info, Area area) const -> void {
     draw_rect(info, calc_fit_rect(area, width, height));
 }
 GraphicBase::GraphicBase(Shader& type_specific) : type_specific(type_specific) {

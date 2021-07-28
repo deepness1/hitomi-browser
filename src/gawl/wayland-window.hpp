@@ -12,7 +12,7 @@
 
 namespace gawl {
 class WaylandWindow : public GawlWindow {
-  friend class WaylandApplication;
+    friend class WaylandApplication;
 
   private:
     // global objects
@@ -41,7 +41,7 @@ class WaylandWindow : public GawlWindow {
     EGLSurface            eglsurface = nullptr;
 
     std::thread::id     main_thread_id;
-    bool                frame_ready = true;
+    bool                frame_ready   = true;
     SafeVar<bool>       current_frame = true;
     bool                has_pointer;
     bool                has_keyboard;
@@ -57,15 +57,15 @@ class WaylandWindow : public GawlWindow {
     std::map<int, bool> keypress_info; // first=linux-syscall-code second=pressed?
     SafeVar<bool>       do_refresh = false;
 
-    void init_egl();
-    void resize_buffer(int width, int height, int scale);
-    void handle_event();
-    void swap_buffer();
-    void choose_surface();
-    void wait_for_key_repeater_exit();
+    auto init_egl() -> void;
+    auto resize_buffer(int width, int height, int scale) -> void;
+    auto handle_event() -> void;
+    auto swap_buffer() -> void;
+    auto choose_surface() -> void;
+    auto wait_for_key_repeater_exit() -> void;
 
   public:
-    void refresh() final;
+    auto refresh() -> void final;
 
     WaylandWindow(GawlApplication& app, int initial_window_width = 800, int initial_window_height = 600);
     virtual ~WaylandWindow();

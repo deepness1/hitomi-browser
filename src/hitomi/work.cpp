@@ -1,30 +1,73 @@
-#include <algorithm>
 #include <filesystem>
-#include <functional>
-#include <mutex>
-#include <optional>
-#include <string>
 #include <thread>
-#include <vector>
 
-#include "json.hpp"
 #include <fmt/format.h>
 
 #include "misc.hpp"
-#include "type.hpp"
 #include "work.hpp"
 
 namespace {
-constexpr const char* work_info_url     = "ltn.hitomi.la/galleries/{}.js";
-constexpr const char* gallery_block_url = "ltn.hitomi.la/galleryblock/{}.html";
+constexpr auto work_info_url     = "ltn.hitomi.la/galleries/{}.js";
+constexpr auto gallery_block_url = "ltn.hitomi.la/galleryblock/{}.html";
 } // namespace
 
 namespace hitomi {
-bool Work::valid() const noexcept {
-    return id != static_cast<GalleryID>(-1) && !title.empty();
+auto Work::get_id() const -> GalleryID {
+    return id;
 }
-bool Work::download_info() {
+auto Work::get_display_name() const -> std::string {
     if(id == static_cast<GalleryID>(-1)) {
+        return "";
+    }
+    if(title.empty()) {
+        return "?";
+    }
+    if(!japanese_title.empty()) {
+        return japanese_title;
+    }
+    return title;
+}
+auto Work::get_thumbnail() -> std::optional<std::vector<uint8_t>> {
+    if(id == static_cast<GalleryID>(-1)) {
+        return std::nullopt;
+    }
+    if(images.empty()) {
+        return std::nullopt;
+    }
+    return download_binary(images[0].get_thumbnail_url().data(), nullptr, nullptr, 15);
+}
+auto Work::get_language() const -> const std::string& {
+    return language;
+}
+auto Work::get_pages() const -> uint64_t {
+    return images.size();
+}
+auto Work::get_date() const -> const std::string& {
+    return date;
+}
+auto Work::get_tags() const -> const std::vector<std::string>& {
+    return tags;
+}
+auto Work::get_artists() const -> const std::vector<std::string>& {
+    return artists;
+}
+auto Work::get_groups() const -> const std::vector<std::string>& {
+    return groups;
+}
+auto Work::get_type() const -> const std::string& {
+    return type;
+}
+auto Work::get_series() const -> const std::vector<std::string>& {
+    return series;
+}
+auto Work::has_id() const -> bool {
+    return id != static_cast<GalleryID>(-1);
+}
+auto Work::has_info() const -> bool {
+    return has_id() && !title.empty();
+}
+auto Work::download_info() -> bool {
+    if(!has_id()) {
         return false;
     }
     auto url    = fmt::format(work_info_url, id);
@@ -32,11 +75,11 @@ bool Work::download_info() {
     if(!buffer.has_value()) {
         return false;
     }
-    auto json_head = std::find(buffer.value().begin(), buffer.value().end(), '=');
+    const auto json_head = std::find(buffer.value().begin(), buffer.value().end(), '=');
     if(json_head == buffer.value().end()) {
         return false;
     }
-    auto json = nlohmann::json::parse(json_head + 1, buffer.value().end());
+    const auto json = nlohmann::json::parse(json_head + 1, buffer.value().end());
     for(auto& [key, value] : json.items()) {
         if(key == "title" && value.is_string()) {
             title = value.get<std::string>();
@@ -48,9 +91,9 @@ bool Work::download_info() {
             date = value.get<std::string>();
         } else if(key == "tags" && value.is_array()) {
             for(auto& t : value) {
-                bool male    = t.contains("male") && ((t["male"].is_string() && t["male"].get<std::string>() == "1") || (t["male"].is_number() && t["male"].get<int>() == 1));
-                bool female  = t.contains("female") && ((t["female"].is_string() && t["female"].get<std::string>() == "1") || (t["female"].is_number() && t["female"].get<int>() == 1));
-                auto tag_str = t["tag"].get<std::string>();
+                const auto male    = t.contains("male") && ((t["male"].is_string() && t["male"].get<std::string>() == "1") || (t["male"].is_number() && t["male"].get<int>() == 1));
+                const auto female  = t.contains("female") && ((t["female"].is_string() && t["female"].get<std::string>() == "1") || (t["female"].is_number() && t["female"].get<int>() == 1));
+                auto       tag_str = t["tag"].get<std::string>();
                 if(male) {
                     tag_str = "male:" + tag_str;
                 } else if(female) {
@@ -69,91 +112,45 @@ bool Work::download_info() {
 
     url    = fmt::format(gallery_block_url, id);
     buffer = download_binary(url.data());
+    if(!buffer) {
+        return false;
+    }
 
-    auto parse_comma_list = [&buffer](std::string const& key) -> std::vector<std::string> {
-        auto& arr = buffer.value();
-        std::vector<std::string> result;
-        auto                     pos     = arr.begin();
-        const static std::string sign[2] = {">", "<"};
+    auto parse_comma_list = [&buffer](const std::string& key) -> std::vector<std::string> {
+        const auto& arr    = buffer.value();
+        auto        result = std::vector<std::string>();
+        auto        pos    = arr.begin();
         while(1) {
             pos = std::search(pos, arr.end(), key.begin(), key.end());
             if(pos == arr.end()) {
                 break;
             } else {
-                auto a = std::find(pos, arr.end(), '>') + 1;
-                auto b = std::find(a, arr.end(), '<');
-                pos    = b + 1;
+                const auto a = std::find(pos, arr.end(), '>') + 1;
+                const auto b = std::find(a, arr.end(), '<');
+                pos          = b + 1;
                 result.emplace_back(a, b);
             }
         }
         return result;
     };
-    if(!buffer) return false;
     artists = parse_comma_list("/artist/");
     groups  = parse_comma_list("/group/");
-    series = parse_comma_list("/series/");
+    series  = parse_comma_list("/series/");
     return true;
 }
-std::string Work::get_display_name() const noexcept {
-    if(id == static_cast<GalleryID>(-1)) {
-        return "";
-    }
-    if(title.empty()) {
-        return "?";
-    }
-    if(!japanese_title.empty()) {
-        return japanese_title;
-    }
-    return title;
-}
-std::optional<std::vector<char>> Work::get_thumbnail() {
-    if(id == static_cast<GalleryID>(-1)) {
-        return std::nullopt;
-    }
-    if(images.empty()) {
-        return std::nullopt;
-    }
-    return download_binary(images[0].get_thumbnail_url().data());
-}
-const std::string& Work::get_language() const noexcept {
-    return language;
-}
-uint64_t Work::get_pages() const noexcept {
-    return images.size();
-}
-const std::string& Work::get_date() const noexcept {
-    return date;
-}
-const std::vector<std::string>& Work::get_tags() const noexcept {
-    return tags;
-}
-const std::vector<std::string>& Work::get_artists() const noexcept {
-    return artists;
-}
-const std::vector<std::string>& Work::get_groups() const noexcept {
-    return groups;
-}
-const std::string& Work::get_type() const noexcept {
-    return type;
-}
-const std::vector<std::string>& Work::get_series() const noexcept {
-    return series;
-}
-bool Work::start_download(const char* savedir, uint64_t threads, bool webp, std::function<bool(uint64_t)> callback) {
-    if(id == static_cast<GalleryID>(-1)) {
+auto Work::start_download(const char* const savedir, const uint64_t threads, const bool webp, const std::function<bool(uint64_t)> callback) -> bool {
+    if(!has_info()) {
         return false;
     }
-    if(threads == 0) {
+    if(!std::filesystem::create_directories(savedir)) {
         return false;
     }
-    uint64_t                 index = 0;
-    std::mutex               index_lock;
-    std::vector<std::thread> workers(threads);
-    bool                     error = false;
-    if(!std::filesystem::create_directory(savedir)) {
-        return false;
-    }
-    for(uint64_t t = 0; t < threads; ++t) {
+
+    auto index      = size_t(0);
+    auto index_lock = std::mutex();
+    auto workers    = std::vector<std::thread>(threads);
+    auto error      = false;
+    for(size_t t = 0; t < threads; ++t) {
         workers[t] = std::thread([&]() {
             while(1) {
                 uint64_t i;
@@ -166,7 +163,7 @@ bool Work::start_download(const char* savedir, uint64_t threads, bool webp, std:
                         break;
                     }
                 }
-                auto e = images[i].download(savedir, webp);
+                const auto e = images[i].download(savedir, webp);
                 if(callback && !callback(i)) {
                     break;
                 }
@@ -181,10 +178,7 @@ bool Work::start_download(const char* savedir, uint64_t threads, bool webp, std:
     }
     return !error;
 }
-Work::Work(GalleryID id) : id(id) {
-}
-Work::Work() : id(-1) {
-}
-Work::~Work() {
-}
+Work::Work(const GalleryID id) : id(id){};
+Work::Work() : id(-1){};
+Work::~Work(){};
 } // namespace hitomi

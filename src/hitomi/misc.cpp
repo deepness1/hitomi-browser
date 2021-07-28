@@ -1,30 +1,28 @@
 #include <cstring>
 #include <iomanip>
 #include <sstream>
-#include <string>
 
 #include <curl/curl.h>
 #include <curl/easy.h>
-#include <linux/byteorder/little_endian.h>
 
 #include "misc.hpp"
 
 namespace {
-size_t write_callback(void* p, size_t s, size_t n, void* u) {
-    auto&  buffer = *reinterpret_cast<std::vector<char>*>(u);
-    size_t len    = s * n;
-    size_t head   = buffer.size();
+auto write_callback(const void* const p, const size_t s, const size_t n, void* const u) -> size_t {
+    auto&      buffer = *reinterpret_cast<std::vector<uint8_t>*>(u);
+    const auto len    = s * n;
+    const auto head   = buffer.size();
     buffer.resize(head + len);
     std::memcpy(&buffer[head], p, len);
     return len;
 }
 struct CurlHandle {
-    CURL*       curl;
-//    curl_slist* chunk = nullptr;
+    CURL* curl;
+    //    curl_slist* chunk = nullptr;
 
-//    operator curl_slist*() {
-//        return chunk;
-//    }
+    //    operator curl_slist*() {
+    //        return chunk;
+    //    }
     operator CURL*() {
         return curl;
     }
@@ -33,21 +31,22 @@ struct CurlHandle {
     }
     ~CurlHandle() {
         curl_easy_cleanup(curl);
-//        if(chunk != nullptr) {
-//            curl_slist_free_all(chunk);
-//        }
+        //        if(chunk != nullptr) {
+        //            curl_slist_free_all(chunk);
+        //        }
     }
 };
-std::string encode_url(std::string const& url) {
-    constexpr std::array safe = {'-', '_', '.', '~', '/', '?'};
-    std::ostringstream   escaped;
+auto encode_url(std::string const& url) -> std::string {
+    constexpr auto SAFE = std::array{'-', '_', '.', '~', '/', '?'};
+
+    auto escaped = std::ostringstream();
     escaped.fill('0');
     escaped << std::hex;
 
     for(auto i = url.cbegin(), n = url.end(); i != n; ++i) {
-        std::string::value_type c = (*i);
+        const auto c = (*i);
 
-        if(isalnum(c) || (std::find(safe.begin(), safe.end(), c) != safe.end())) {
+        if(isalnum(c) || (std::find(SAFE.begin(), SAFE.end(), c) != SAFE.end())) {
             escaped << c;
             continue;
         }
@@ -62,38 +61,18 @@ std::string encode_url(std::string const& url) {
 } // namespace
 
 namespace hitomi {
-bool init_hitomi() {
+auto init_hitomi() -> bool {
     curl_global_init(CURL_GLOBAL_SSL);
     return true;
 }
-bool finish_hitomi() {
+auto finish_hitomi() -> bool {
     curl_global_cleanup();
     return true;
 }
-uint64_t Cutter::cut_int64() {
-    pos += 8;
-    return __be64_to_cpup(reinterpret_cast<__be64*>(&data[pos - 8]));
-}
-uint32_t Cutter::cut_int32() {
-    pos += 4;
-    return __be32_to_cpup(reinterpret_cast<__be32*>(&data[pos - 4]));
-}
-std::vector<char> Cutter::cut(size_t size) {
-    pos += size;
-    return copy(pos - size, size);
-}
-std::vector<char> Cutter::copy(size_t offset, size_t length) {
-    return std::vector<char>(data.begin() + offset, data.begin() + offset + length);
-}
-Cutter::Cutter(std::vector<char>& _data) : data(std::move(_data)) {
-    if(data.empty()) {
-        throw std::runtime_error("empty data passed.");
-    }
-}
-std::optional<std::vector<char>> download_binary(const char* url, const char* range, const char* referer, int timeout) {
-    auto              encoded = "https://" + encode_url(url);
-    std::vector<char> buffer;
-    CurlHandle        curl;
+auto download_binary(const char* const url, const char* const range, const char* const referer, const int timeout) -> std::optional<std::vector<uint8_t>> {
+    const auto encoded = "https://" + encode_url(url);
+    auto       buffer  = std::vector<uint8_t>();
+    auto       curl    = CurlHandle();
     curl_easy_setopt(curl, CURLOPT_URL, encoded.data());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
@@ -104,7 +83,7 @@ std::optional<std::vector<char>> download_binary(const char* url, const char* ra
     if(referer != nullptr) {
         curl_easy_setopt(curl, CURLOPT_REFERER, referer);
     }
-    auto res = curl_easy_perform(curl);
+    const auto res = curl_easy_perform(curl);
     if(res != CURLE_OK) {
         return std::nullopt;
     }

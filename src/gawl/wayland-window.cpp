@@ -15,7 +15,7 @@ EGLDisplay egldisplay         = nullptr;
 EGLConfig  eglconfig          = nullptr;
 EGLContext eglcontext         = nullptr;
 } // namespace
-void WaylandWindow::init_egl() {
+auto WaylandWindow::init_egl() -> void {
     if(egl_count == 0) {
         egldisplay = eglGetDisplay(display);
         if(egldisplay == EGL_NO_DISPLAY) {
@@ -63,7 +63,7 @@ void WaylandWindow::init_egl() {
     choose_surface();
     egl_count += 1;
 }
-void WaylandWindow::resize_buffer(int width, int height, int scale) {
+auto WaylandWindow::resize_buffer(int width, int height, int scale) -> void {
     if((width != -1 && height != -1 && width == window_size[0] && height == window_size[1]) || (scale != -1 && scale == buffer_scale)) {
         return;
     }
@@ -94,7 +94,7 @@ void WaylandWindow::resize_buffer(int width, int height, int scale) {
     window_resize_callback();
     app.tell_event(this);
 }
-void WaylandWindow::handle_event() {
+auto WaylandWindow::handle_event() -> void {
     uint32_t repeated = key_repeated.load();
     key_repeated.store(0);
     if(repeated != 0) {
@@ -107,7 +107,7 @@ void WaylandWindow::handle_event() {
         refresh();
     }
 }
-void WaylandWindow::refresh() {
+auto WaylandWindow::refresh() -> void {
     if(!is_running()) {
         return;
     }
@@ -131,7 +131,7 @@ void WaylandWindow::refresh() {
         bool current;
         {
             std::lock_guard<std::mutex> lock(current_frame.mutex);
-            current = current_frame.data;
+            current            = current_frame.data;
             current_frame.data = true;
         }
         if(!get_event_driven() || !current) {
@@ -141,12 +141,12 @@ void WaylandWindow::refresh() {
     swap_buffer();
     app.tell_event(this);
 }
-void WaylandWindow::swap_buffer() {
+auto WaylandWindow::swap_buffer() -> void {
     if(eglSwapBuffers(egldisplay, eglsurface) == EGL_FALSE) {
         throw std::runtime_error("eglSwapBuffers");
     }
 }
-void WaylandWindow::choose_surface() {
+auto WaylandWindow::choose_surface() -> void {
     if(current_eglsurface == eglsurface) {
         return;
     }
@@ -155,7 +155,7 @@ void WaylandWindow::choose_surface() {
     }
     current_eglsurface = surface;
 }
-void WaylandWindow::wait_for_key_repeater_exit() {
+auto WaylandWindow::wait_for_key_repeater_exit() -> void {
     last_pressed_key.store(-1);
     key_delay_timer.wakeup();
     if(key_repeater.joinable()) {

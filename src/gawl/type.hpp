@@ -9,21 +9,21 @@ namespace gawl {
 struct Area {
     std::array<double, 4> data;
 
-    void magnify(const double scale) {
+    auto magnify(const double scale) -> void {
         for(auto& p : data) {
             p *= scale;
         }
     }
-    double width() const {
+    auto width() const -> double {
         return data[2] - data[0];
     }
-    double height() const {
+    auto height() const -> double {
         return data[3] - data[1];
     }
-    double operator[](size_t i) const {
+    auto operator[](size_t i) const -> double {
         return data[i];
     }
-    double& operator[](size_t i) {
+    auto operator[](size_t i) -> double& {
         return data[i];
     }
 };
@@ -48,15 +48,15 @@ struct SafeVar {
     mutable std::mutex mutex;
     T                  data;
 
-    void store(T src) {
+    auto store(T src) -> void {
         std::lock_guard<std::mutex> lock(mutex);
         data = src;
     }
-    T load() const {
+    auto load() const -> T {
         std::lock_guard<std::mutex> lock(mutex);
         return data;
     }
-    SafeVar& operator=(const SafeVar<T>& other) {
+    auto operator=(const SafeVar<T>& other) -> SafeVar& {
         data = other.data;
         return *this;
     }
@@ -69,18 +69,18 @@ class ConditionalVariable {
     SafeVar<bool>           waked;
 
   public:
-    void wait() {
+    auto wait() -> void {
         waked.store(false);
         std::unique_lock<std::mutex> lock(waked.mutex);
         condv.wait(lock, [this]() { return waked.data; });
     }
     template <typename T>
-    bool wait_for(T duration) {
+    auto wait_for(T duration) -> bool {
         waked.store(false);
         std::unique_lock<std::mutex> lock(waked.mutex);
         return condv.wait_for(lock, duration, [this]() { return waked.data; });
     }
-    void wakeup() {
+    auto wakeup() -> void {
         waked.store(true);
         condv.notify_all();
     }

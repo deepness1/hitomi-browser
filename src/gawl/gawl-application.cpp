@@ -4,27 +4,27 @@
 #include "gawl-window.hpp"
 
 namespace gawl {
-void GawlApplication::register_window(GawlWindow* window) {
+auto GawlApplication::register_window(GawlWindow* const window) -> void {
     if(std::find(windows.begin(), windows.end(), window) == windows.end()) {
         windows.emplace_back(window);
     }
 }
-const std::vector<GawlWindow*>& GawlApplication::get_windows() const noexcept {
+auto GawlApplication::get_windows() const -> const std::vector<GawlWindow*>& {
     return windows;
 }
-void GawlApplication::unregister_window(GawlWindow* window) {
+auto GawlApplication::unregister_window(const GawlWindow* window) -> void {
     if(auto w = std::find(windows.begin(), windows.end(), window); w != windows.end()) {
         windows.erase(w);
     }
 }
-void GawlApplication::close_all_windows() {
+auto GawlApplication::close_all_windows() -> void {
     for(auto w : windows) {
         w->status = GawlWindow::Status::CLOSE;
         delete w;
     }
     windows.clear();
 }
-void GawlApplication::close_window(GawlWindow* window) {
+auto GawlApplication::close_window(GawlWindow* window) -> void {
     if(auto w = std::find(windows.begin(), windows.end(), window); w != windows.end()) {
         (*w)->status = GawlWindow::Status::CLOSE;
         tell_event(nullptr);

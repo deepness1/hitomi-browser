@@ -4,8 +4,8 @@
 #include "node.hpp"
 
 namespace {
-int compare_bytes(std::vector<char> const& a, std::vector<char> const& b) {
-    auto min = std::min(a.size(), b.size());
+auto compare_bytes(const std::vector<uint8_t>& a, const std::vector<uint8_t>& b) -> int {
+    const auto min = std::min(a.size(), b.size());
     for(size_t i = 0; i < min; ++i) {
         if(static_cast<uint8_t>(a[i]) < static_cast<uint8_t>(b[i])) {
             return -1;
@@ -17,9 +17,9 @@ int compare_bytes(std::vector<char> const& a, std::vector<char> const& b) {
 }
 } // namespace
 namespace hitomi {
-bool Node::locate_key(Key const& key, uint64_t& index) const noexcept {
-    int cmp_result;
+auto Node::locate_key(const Key& key, uint64_t& index) const -> bool {
     index = keys.size();
+    int cmp_result;
     for(size_t i = 0; i < keys.size(); ++i) {
         const auto& k = keys[i];
         cmp_result    = compare_bytes(key, k);
@@ -30,7 +30,7 @@ bool Node::locate_key(Key const& key, uint64_t& index) const noexcept {
     }
     return cmp_result == 0;
 }
-bool Node::is_leaf() const noexcept {
+auto Node::is_leaf() const -> bool {
     for(auto a : subnode_addresses) {
         if(a != 0) {
             return false;
@@ -38,33 +38,34 @@ bool Node::is_leaf() const noexcept {
     }
     return true;
 }
-Range Node::get_data(uint64_t index) const {
+auto Node::get_data(const uint64_t index) const -> Range {
     return datas[index];
 }
-uint64_t Node::get_subnode_address(uint64_t index) const {
+auto Node::get_subnode_address(const uint64_t index) const -> uint64_t {
     return subnode_addresses[index];
 }
-Node::Node(std::vector<char> bytes) {
-    Cutter arr(bytes);
-    auto   keys_limit = arr.cut_int32();
+Node::Node(std::vector<uint8_t> bytes) {
+    auto arr = ByteReader(bytes);
+
+    const auto keys_limit = *arr.read<uint32_t>();
     for(size_t i = 0; i < keys_limit; ++i) {
-        auto key_size = arr.cut_int32();
+        const auto key_size = *arr.read<uint32_t>();
         if(key_size > 32) {
             throw std::runtime_error("keysize is too long.");
         }
-        keys.emplace_back(arr.cut(key_size));
+        keys.emplace_back(arr.read(key_size));
     }
 
-    auto datas_limit = arr.cut_int32();
+    const auto datas_limit = *arr.read<uint32_t>();
     for(size_t i = 0; i < datas_limit; ++i) {
-        auto offset = arr.cut_int64();
-        auto length = arr.cut_int32();
+        const auto offset = *arr.read<uint64_t>();
+        const auto length = *arr.read<uint32_t>();
         datas.emplace_back(Range{offset, offset + length - 1});
     }
 
-    constexpr size_t NUMBER_OF_SUBNODE_ADDRESSES = 16 + 1;
+    constexpr auto NUMBER_OF_SUBNODE_ADDRESSES = 16 + 1;
     for(size_t i = 0; i < NUMBER_OF_SUBNODE_ADDRESSES; ++i) {
-        auto address = arr.cut_int64();
+        const auto address = *arr.read<uint64_t>();
         subnode_addresses.emplace_back(address);
     }
 }

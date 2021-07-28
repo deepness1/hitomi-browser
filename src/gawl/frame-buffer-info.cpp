@@ -3,13 +3,15 @@
 #include "gawl-window.hpp"
 
 namespace gawl {
-int FrameBufferInfo::get_scale() const {
-    return window != nullptr ? window->get_scale() : texture != nullptr ? 1 : 1;
+auto FrameBufferInfo::get_scale() const -> int {
+    return window != nullptr ? window->get_scale() : texture != nullptr ? 1
+                                                                        : 1;
 }
-std::array<size_t, 2> FrameBufferInfo::get_size() const {
-    return window != nullptr ? window->get_buffer_size().size : texture != nullptr ? std::array{static_cast<size_t>(texture->get_size()[0]), static_cast<size_t>(texture->get_size()[1])} : std::array<size_t, 2>{0, 0};
+auto FrameBufferInfo::get_size() const -> std::array<size_t, 2> {
+    return window != nullptr ? window->get_buffer_size().size : texture != nullptr ? std::array{static_cast<size_t>(texture->get_size()[0]), static_cast<size_t>(texture->get_size()[1])}
+                                                                                   : std::array<size_t, 2>{0, 0};
 }
-void FrameBufferInfo::prepare() {
+auto FrameBufferInfo::prepare() -> void {
     const auto size = get_size();
     if(window != nullptr) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);

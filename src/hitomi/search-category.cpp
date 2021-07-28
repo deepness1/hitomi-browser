@@ -1,31 +1,31 @@
-#include <vector>
-
 #include <fmt/format.h>
 
 #include "misc.hpp"
 #include "search-category.hpp"
 
-constexpr const char* SEARCH_DOMAIN = "ltn.hitomi.la/{}.nozomi";
+constexpr auto* SEARCH_DOMAIN = "ltn.hitomi.la/{}.nozomi";
 namespace hitomi {
-std::vector<hitomi::GalleryID> fetch_ids(const char* url) {
-    auto buffer = download_binary(url, nullptr, nullptr, 30);
-    if(!buffer) return {};
-    size_t                         len = buffer.value().size() / 4;
-    Cutter                         arr(buffer.value());
-    std::vector<hitomi::GalleryID> ids(len);
+auto fetch_ids(const char* const url) -> std::vector<hitomi::GalleryID> {
+    const auto buffer = download_binary(url, nullptr, nullptr, 30);
+    if(!buffer) {
+        return {};
+    }
+    const auto len = buffer.value().size() / 4;
+    auto       arr = ByteReader(buffer.value());
+    auto       ids = std::vector<hitomi::GalleryID>(len);
     for(size_t i = 0; i < len; ++i) {
-        ids[i] = arr.cut_int32();
+        ids[i] = *arr.read<uint32_t>();
     }
     return ids;
 }
-std::vector<GalleryID> fetch_by_category(const char* category, const char* value) {
+auto fetch_by_category(const char* const category, const char* const value) -> std::vector<GalleryID> {
     return fetch_ids(fmt::format(SEARCH_DOMAIN, fmt::format("{}/{}-all", category, value)).data());
 }
-std::vector<GalleryID> fetch_by_type(const char* type, const char* lang) {
+auto fetch_by_type(const char* const type, const char* const lang) -> std::vector<GalleryID> {
     return fetch_ids(fmt::format(SEARCH_DOMAIN, fmt::format("type/{}-{}", type, lang)).data());
 }
-std::vector<GalleryID> fetch_by_tag(const char* tag) {
-    std::string url;
+auto fetch_by_tag(const char* const tag) -> std::vector<GalleryID> {
+    auto url = std::string();
     if(std::strcmp(tag, "index") == 0) {
         url = fmt::format(SEARCH_DOMAIN, fmt::format("{}-all", tag));
     } else {
@@ -33,7 +33,7 @@ std::vector<GalleryID> fetch_by_tag(const char* tag) {
     }
     return fetch_ids(url.data());
 }
-std::vector<GalleryID> fetch_by_language(const char* lang) {
+auto fetch_by_language(const char* const lang) -> std::vector<GalleryID> {
     return fetch_ids(fmt::format(SEARCH_DOMAIN, fmt::format("index-{}", lang)).data());
 }
 } // namespace hitomi

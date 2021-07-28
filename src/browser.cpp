@@ -58,7 +58,7 @@ void Browser::adjust_cache() {
     {
         std::lock_guard<std::mutex> lock(cache.mutex);
         for(auto i : visible) {
-            if(auto w = cache.data.find(i); w == cache.data.end() || (w->second != nullptr && !w->second->work.valid())) {
+            if(auto w = cache.data.find(i); w == cache.data.end() || (w->second != nullptr && !w->second->work.has_info())) {
                 request_download_cache(i);
             } else {
                 new_cache.emplace(*w);
@@ -351,7 +351,7 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app), tempora
                     }
                 }
 
-                if(!w.valid()) {
+                if(!w.has_info()) {
                     w = hitomi::Work(next);
                     w.download_info();
                 }

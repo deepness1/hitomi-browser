@@ -11,20 +11,20 @@ class GawlApplication {
     void register_window(GawlWindow* window);
 
   protected:
-    const std::vector<GawlWindow*>& get_windows() const noexcept;
-    void                            unregister_window(GawlWindow* window);
-    void                            close_all_windows();
+    auto get_windows() const -> const std::vector<GawlWindow*>&;
+    auto unregister_window(const GawlWindow* window) -> void;
+    auto close_all_windows() -> void;
 
   public:
     template <typename T, typename... A>
-    void open_window(A... args) {
+    auto open_window(A... args) -> void {
         register_window(new T(*this, args...));
     }
-    void         close_window(GawlWindow* window);
-    virtual void tell_event(GawlWindow* window) = 0;
-    virtual void run()                          = 0;
-    virtual void quit()                         = 0;
-    virtual bool is_running() const             = 0;
+    auto         close_window(GawlWindow* window) -> void;
+    virtual auto tell_event(GawlWindow* window) -> void = 0;
+    virtual auto run() -> void                          = 0;
+    virtual auto quit() -> void                         = 0;
+    virtual auto is_running() const -> bool             = 0;
     virtual ~GawlApplication() {}
 };
 } // namespace gawl

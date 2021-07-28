@@ -1,162 +1,18 @@
-#include <algorithm>
-#include <array>
-#include <iostream>
-#include <sstream>
-#include <stdexcept>
-#include <string>
+#include <cstring>
 
 #include "search-category.hpp"
 #include "search-keyword.hpp"
+#include "search-parse.hpp"
 #include "search.hpp"
 #include "type.hpp"
 
-namespace {
-enum class Option {
-    artist,
-    series,
-    character,
-    worktype,
-    tags,
-    language,
-    keywords,
-};
-struct Arg {
-    Option      option;
-    const char  chara;
-    const char* help;
-    bool        param = true;
-};
-constexpr Arg args[] = {
-    {Option::artist, 'a', "specify artist."},
-    {Option::artist, 'g', "specify group."},
-    {Option::artist, 's', "specify series."},
-    {Option::artist, 'c', "specify character."},
-    {Option::artist, 'w', "specify type.{doujinshi, artistcg, gamecg, manga}"},
-    {Option::artist, 't', "specify tags."},
-    {Option::artist, 'l', "specify language."},
-    {Option::artist, 'k', "specify keywords."},
-    {Option::artist, 'h', "show this help.", false},
-    {Option::artist, 'q', "print nothing.", false},
-};
-constexpr size_t args_limit = sizeof(args) / sizeof(args[0]) - 1;
-} // namespace
-
-namespace hitomi {
-using SVec = std::vector<std::string>;
-std::vector<GalleryID> query(SVec artist, SVec group, SVec series, SVec character, SVec worktype, SVec tags, SVec language, SVec keywords);
-std::vector<GalleryID> search(const char* arg, std::optional<std::ostringstream*> output, std::function<void()> on_complete) {
-    int  param_target = 7; // keywords
-    SVec params[args_limit];
-
-    bool quiet         = false;
-    bool help          = false;
-    bool expect_option = false;
-    bool white_space   = true;
-
-    std::vector<const char*> errors;
-    std::ostringstream       out;
-
-    do {
-        for(auto& c : std::string(arg)) {
-            if(expect_option) {
-                for(size_t i = 0; i < args_limit; ++i) {
-                    if(args[i].chara == c) {
-                        if(args[i].param) {
-                            param_target = i;
-                        } else {
-                            if(c == 'h') {
-                                help = true;
-
-                            } else if(c == 'q') {
-                                quiet = true;
-                            }
-                        }
-                        expect_option = false;
-                        break;
-                    }
-                }
-                if(expect_option) {
-                    expect_option = false;
-                    errors.emplace_back("unknown option has passed.");
-                } else if(help) {
-                    break;
-                }
-                continue;
-            }
-            switch(c) {
-            case ' ':
-                white_space = true;
-                continue;
-            case '-':
-                if(white_space) {
-                    expect_option = true;
-                    continue;
-                } else {
-                    break;
-                }
-            }
-            if(white_space) {
-                params[param_target].emplace_back();
-                white_space = false;
-            }
-            params[param_target].back() += c;
-        }
-        if(help) {
-            if(!quiet) {
-                for(size_t i = 0; i < args_limit; ++i) {
-                    out << "\"-" << args[i].chara << "\"\t" << args[i].help << std::endl;
-                }
-            }
-            break;
-        }
-        if(!errors.empty()) {
-            if(!quiet) {
-                out << "some errors occurred while parsing argument:" << std::endl;
-                for(auto e : errors) {
-                    out << e << std::endl;
-                }
-            }
-            break;
-        }
-    } while(0);
-    std::vector<GalleryID> result = {};
-    if(!help && errors.empty()) {
-        for(auto& p : params) {
-            for(auto& s : p) {
-                for(auto& c : s) {
-                    if(c == '_') {
-                        c = ' ';
-                    }
-                }
-            }
-        }
-        result = query(params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7]);
-    }
-    if(output.has_value()) {
-        *(output.value()) = std::move(out);
-    } else {
-        if(!quiet) {
-            std::cout << out.str();
-        }
-    }
-    if(on_complete) {
-        on_complete();
-    }
-    std::reverse(result.begin(), result.end());
-    return result;
-}
-} // namespace hitomi
-
-// main
 namespace hitomi {
 namespace {
-std::array<std::vector<std::string>, 3> categorize_words(std::vector<std::string> words) {
-    std::vector<std::string> and_words;
-    std::vector<std::string> or_words;
-    std::vector<std::string> not_words;
+auto categorize_words(const std::vector<std::string>& words) -> std::array<std::vector<std::string>, 3> {
+    std::vector<std::string> and_words, or_words, not_words;
     for(auto& w : words) {
-        std::string::iterator     src;
-        std::vector<std::string>* dest;
+        std::string::const_iterator src;
+        std::vector<std::string>*   dest;
         if(w[0] == '~') {
             src  = w.begin() + 1;
             dest = &not_words;
@@ -180,25 +36,64 @@ std::array<std::vector<std::string>, 3> categorize_words(std::vector<std::string
     } else if(lists.size() == 1) {                                                                      \
         return lists[0];                                                                                \
     }                                                                                                   \
-    std::vector<GalleryID> result = lists[0];                                                           \
+    auto result = lists[0];                                                                             \
     for(auto l = lists.begin() + 1; l != lists.end(); ++l) {                                            \
-        std::vector<GalleryID> res;                                                                     \
+        auto res = std::vector<GalleryID>();                                                            \
         std::func(result.begin(), result.end(), l->begin(), l->end(), std::inserter(res, res.begin())); \
         result = res;                                                                                   \
     }                                                                                                   \
     return result;
 
-std::vector<GalleryID> filter_and(std::vector<std::vector<GalleryID>>& lists) {
+auto filter_and(const std::vector<std::vector<GalleryID>>& lists) -> std::vector<GalleryID> {
     FILTER(set_intersection);
 }
-std::vector<GalleryID> filter_or(std::vector<std::vector<GalleryID>>& lists) {
+auto filter_or(const std::vector<std::vector<GalleryID>>& lists) -> std::vector<GalleryID> {
     FILTER(set_union);
 }
-std::vector<GalleryID> filter_not(std::vector<std::vector<GalleryID>>& lists) {
+auto filter_not(const std::vector<std::vector<GalleryID>>& lists) -> std::vector<GalleryID> {
     FILTER(set_difference);
 }
+auto split(const char* str) -> std::vector<std::string> {
+    auto       result = std::vector<std::string>();
+    const auto len    = std::strlen(str);
+    bool       qot    = false;
+    size_t     arglen;
+    for(size_t i = 0; i < len; i += 1) {
+        auto start = i;
+        if(str[i] == '\"') {
+            qot = true;
+        }
+        if(qot) {
+            i += 1;
+            start += 1;
+            while(i < len && str[i] != '\"') {
+                i += 1;
+            }
+            if(i < len) {
+                qot = false;
+            }
+            arglen = i - start;
+            //i += 1;
+        } else {
+            while(i < len && str[i] != ' ') {
+                i++;
+            }
+            arglen = i - start;
+        }
+        result.emplace_back(str + start, str + start + arglen);
+    }
+    //if(qot) {
+    //    printf("One of the quotes is open\n");
+    //}
+    return result;
+}
 } // namespace
-std::vector<GalleryID> query(SVec artist, SVec group, SVec series, SVec character, SVec worktype, SVec tags, SVec language, SVec keywords) {
+auto search(const std::vector<std::string>& args, std::string* output, std::function<void()> on_complete) -> std::vector<GalleryID> {
+    auto parsed = parse_args(args);
+    if(output != nullptr && !parsed.quiet) {
+        *output = std::move(parsed.print);
+    }
+
 #define FETCH(ARG, FETCH_FUNC)                     \
     if(!ARG.empty()) {                             \
         auto category = categorize_words(ARG);     \
@@ -212,14 +107,14 @@ std::vector<GalleryID> query(SVec artist, SVec group, SVec series, SVec characte
     }
 
     std::vector<std::vector<GalleryID>> lists[3];
-    FETCH(artist, fetch_by_category("artist", w.data()))
-    FETCH(group, fetch_by_category("group", w.data()))
-    FETCH(series, fetch_by_category("series", w.data()))
-    FETCH(character, fetch_by_category("character", w.data()))
-    FETCH(worktype, fetch_by_type(w.data()))
-    FETCH(tags, fetch_by_tag(w.data()))
-    FETCH(language, fetch_by_language(w.data()))
-    FETCH(keywords, search_by_keyword(w.data()))
+    FETCH(parsed.artist, fetch_by_category("artist", w.data()))
+    FETCH(parsed.group, fetch_by_category("group", w.data()))
+    FETCH(parsed.series, fetch_by_category("series", w.data()))
+    FETCH(parsed.character, fetch_by_category("character", w.data()))
+    FETCH(parsed.type, fetch_by_type(w.data()))
+    FETCH(parsed.tag, fetch_by_tag(w.data()))
+    FETCH(parsed.language, fetch_by_language(w.data()))
+    FETCH(parsed.keyword, search_by_keyword(w.data()))
 
     for(auto& l : lists) {
         for(auto& ll : l) {
@@ -234,10 +129,18 @@ std::vector<GalleryID> query(SVec artist, SVec group, SVec series, SVec characte
     if(lists[0].empty()) {
         return {};
     }
-    auto  and_list = filter_and(lists[0]);
-    auto& not_list = lists[2];
+    const auto and_list = filter_and(lists[0]);
+    auto&      not_list = lists[2];
     not_list.insert(not_list.begin(), and_list);
-    return filter_not(not_list);
+    const auto result = filter_not(not_list);
+    if(on_complete) {
+        on_complete();
+    }
+    return result;
 #undef FETCH
+}
+auto search(const char* args, std::string* output, std::function<void()> on_complete) -> std::vector<GalleryID> {
+    const auto a = split(args);
+    return search(a, output, on_complete);
 }
 } // namespace hitomi

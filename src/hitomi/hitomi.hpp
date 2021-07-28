@@ -3,6 +3,6 @@
 #include "search.hpp"
 
 namespace hitomi {
-bool init_hitomi();
-bool finish_hitomi();
+auto init_hitomi() -> bool;
+auto finish_hitomi() -> bool;
 }

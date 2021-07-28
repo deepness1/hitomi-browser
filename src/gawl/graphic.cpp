@@ -1,8 +1,5 @@
-#include <cstddef>
 #include <cstring>
-#include <fstream>
 #include <iostream>
-#include <vector>
 
 #include <IL/il.h>
 #include <ImageMagick-7/Magick++.h>
@@ -13,15 +10,15 @@
 
 namespace gawl {
 namespace {
-PixelBuffer load_texture_imagemagick(Magick::Image&& image) {
+auto load_texture_imagemagick(Magick::Image&& image) -> PixelBuffer {
     image.depth(8);
     Magick::Blob blob;
     image.write(&blob, "RGBA");
     return PixelBuffer(image.columns(), image.rows(), static_cast<const char*>(blob.data()));
 }
-PixelBuffer load_texture_devil(const char* file) {
-    std::vector<char> buffer;
-    auto              image = ilGenImage();
+auto load_texture_devil(const char* file) -> PixelBuffer {
+    std::vector<uint8_t> buffer;
+    auto                 image = ilGenImage();
     ilBindImage(image);
     ilLoadImage(file);
     if(auto err = ilGetError(); err != IL_NO_ERROR) {
@@ -39,31 +36,31 @@ PixelBuffer load_texture_devil(const char* file) {
 extern GlobalVar* global;
 
 // ====== PixelBuffer ====== //
-bool PixelBuffer::empty() const noexcept {
+auto PixelBuffer::empty() const -> bool {
     return data.empty();
 }
-size_t PixelBuffer::get_width() const noexcept {
+auto PixelBuffer::get_width() const -> size_t {
     return size[0];
 }
-size_t PixelBuffer::get_height() const noexcept {
+auto PixelBuffer::get_height() const -> size_t {
     return size[1];
 }
-const char* PixelBuffer::get_buffer() const noexcept {
+auto PixelBuffer::get_buffer() const -> const uint8_t* {
     return data.data();
 }
-void PixelBuffer::clear() {
+auto PixelBuffer::clear() -> void {
     size = {0, 0};
     data.clear();
 }
 PixelBuffer::PixelBuffer(const size_t width, const size_t height, const char* buffer) : size({width, height}) {
-    size_t len = size[0] * size[1] * 4;
+    const size_t len = size[0] * size[1] * 4;
     data.resize(len);
     std::memcpy(data.data(), buffer, len);
 }
-PixelBuffer::PixelBuffer(const size_t width, const size_t height, std::vector<char>& buffer) : size({width, height}) {
+PixelBuffer::PixelBuffer(const size_t width, const size_t height, std::vector<uint8_t>& buffer) : size({width, height}) {
     data = std::move(buffer);
 }
-PixelBuffer::PixelBuffer(const char* file, GraphicLoader loader) {
+PixelBuffer::PixelBuffer(const char* file, const GraphicLoader loader) {
     bool        magick = loader == GraphicLoader::IMAGEMAGICK;
     PixelBuffer buf;
     if(!magick) {
@@ -79,7 +76,7 @@ PixelBuffer::PixelBuffer(const char* file, GraphicLoader loader) {
         *this = std::move(buf);
     }
 }
-PixelBuffer::PixelBuffer(std::vector<char>& buffer) {
+PixelBuffer::PixelBuffer(std::vector<uint8_t>& buffer) {
     Magick::Blob blob(buffer.data(), buffer.size());
     *this = load_texture_imagemagick(Magick::Image(blob));
 }
@@ -124,37 +121,37 @@ GraphicData::GraphicData(const PixelBuffer&& buffer, std::optional<std::array<in
 }
 
 // ====== Graphic ====== //
-int Graphic::get_width(FrameBufferInfo info) const {
+auto Graphic::get_width(const FrameBufferInfo info) const -> int {
     if(!graphic_data) {
         return 0;
     }
     return reinterpret_cast<GraphicData*>(graphic_data.get())->get_width(info);
 }
-int Graphic::get_height(FrameBufferInfo info) const {
+auto Graphic::get_height(const FrameBufferInfo info) const -> int {
     if(!graphic_data) {
         return 0;
     }
     return reinterpret_cast<GraphicData*>(graphic_data.get())->get_height(info);
 }
-void Graphic::draw(FrameBufferInfo info, double x, double y) {
+auto Graphic::draw(const FrameBufferInfo info, const double x, const double y) -> void {
     if(!graphic_data) {
         return;
     }
     reinterpret_cast<GraphicData*>(graphic_data.get())->draw(info, x, y);
 }
-void Graphic::draw_rect(FrameBufferInfo info, Area area) {
+auto Graphic::draw_rect(const FrameBufferInfo info, const Area area) -> void {
     if(!graphic_data) {
         return;
     }
     graphic_data.get()->draw_rect(info, area);
 }
-void Graphic::draw_fit_rect(FrameBufferInfo info, Area area) {
+auto Graphic::draw_fit_rect(const FrameBufferInfo info, const Area area) -> void {
     if(!graphic_data) {
         return;
     }
     graphic_data.get()->draw_fit_rect(info, area);
 }
-void Graphic::clear() {
+auto Graphic::clear() -> void {
     *this = Graphic();
 }
 Graphic::operator GraphicBase*() const {
@@ -181,17 +178,17 @@ Graphic::Graphic(const char* file, GraphicLoader loader, std::optional<std::arra
     GraphicData* data;
     try {
         data = new GraphicData(PixelBuffer(file, loader), crop);
-    } catch(std::exception&) {
+    } catch(const std::exception&) {
         std::cout << file << " is not valid image file." << std::endl;
         return;
     }
     graphic_data.reset(data);
 }
-Graphic::Graphic(std::vector<char>& buffer, std::optional<std::array<int, 4>> crop) {
+Graphic::Graphic(std::vector<uint8_t>& buffer, std::optional<std::array<int, 4>> crop) {
     GraphicData* data;
     try {
         data = new GraphicData(PixelBuffer(buffer), crop);
-    } catch(std::exception&) {
+    } catch(const std::exception&) {
         std::cout << "invalid buffer." << std::endl;
         return;
     }

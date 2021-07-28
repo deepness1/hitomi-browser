@@ -2,11 +2,11 @@
 #include <cstdint>
 #include <vector>
 
-#include "type.hpp"
 #include "misc.hpp"
+#include "type.hpp"
 
 namespace hitomi {
-using Key = std::vector<char>;
+using Key = std::vector<uint8_t>;
 class Node {
   private:
     std::vector<Key>      keys;
@@ -14,10 +14,10 @@ class Node {
     std::vector<uint64_t> subnode_addresses;
 
   public:
-    bool     locate_key(Key const& key, uint64_t& index) const noexcept;
-    bool     is_leaf() const noexcept;
-    Range    get_data(uint64_t index) const;
-    uint64_t get_subnode_address(uint64_t index) const;
-    Node(std::vector<char> bytes);
+    auto locate_key(const Key& key, uint64_t& index) const -> bool;
+    auto is_leaf() const -> bool;
+    auto get_data(uint64_t index) const -> Range;
+    auto get_subnode_address(uint64_t index) const -> uint64_t;
+    Node(std::vector<uint8_t> bytes);
 };
 } // namespace hitomi

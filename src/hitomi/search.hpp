@@ -7,5 +7,6 @@
 #include "type.hpp"
 
 namespace hitomi {
-std::vector<GalleryID> search(const char* arg, std::optional<std::ostringstream*> output = std::nullopt, std::function<void()> on_complete = nullptr);
+auto search(const std::vector<std::string>& args, std::string* output = nullptr, std::function<void()> on_complete = nullptr) -> std::vector<GalleryID>;
+auto search(const char* args, std::string* output = nullptr, std::function<void()> on_complete = nullptr) -> std::vector<GalleryID>;
 }

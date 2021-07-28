@@ -1,7 +1,4 @@
 #pragma once
-#include <functional>
-#include <stdexcept>
-
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
 #include <GL/glext.h>
@@ -10,8 +7,8 @@
 #include "type.hpp"
 
 namespace gawl {
-void init_graphics();
-void finish_graphics();
+auto init_graphics() -> void;
+auto finish_graphics() -> void;
 
 class Shader {
   private:
@@ -21,8 +18,8 @@ class Shader {
     GLuint vao;
 
   public:
-    void   bind_vao();
-    GLuint get_shader();
+    auto bind_vao() -> void;
+    auto get_shader() -> GLuint;
     Shader(const char* vertex_shader_source, const char* fragment_shader_source);
     ~Shader();
 };
@@ -36,14 +33,14 @@ class GraphicBase {
     Shader& type_specific;
     int     width, height;
     bool    invert_top_bottom = false;
-    GLuint  get_texture() const;
+    auto    get_texture() const -> GLuint;
 
   public:
-    virtual int get_width(FrameBufferInfo info) const;
-    virtual int get_height(FrameBufferInfo info) const;
-    void        draw(FrameBufferInfo infoconst, double x, double y) const;
-    void        draw_rect(FrameBufferInfo infoconst, Area area) const;
-    void        draw_fit_rect(FrameBufferInfo info, Area area) const;
+    virtual auto get_width(FrameBufferInfo info) const -> int;
+    virtual auto get_height(FrameBufferInfo info) const -> int;
+    auto         draw(FrameBufferInfo infoconst, double x, double y) const -> void;
+    auto         draw_rect(FrameBufferInfo infoconst, Area area) const -> void;
+    auto         draw_fit_rect(FrameBufferInfo info, Area area) const -> void;
     GraphicBase(Shader& type_specific);
     virtual ~GraphicBase();
 };
