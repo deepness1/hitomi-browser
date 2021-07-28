@@ -5,3 +5,11 @@ subdir('src')
 executable('hitomi-browser', [browser_files],
             include_directories: [browser_inc],
             dependencies : [browser_dep])
+
+executable('hitomi-search', [search_files],
+            include_directories: [search_inc],
+            dependencies : [search_dep])
+
+executable('hitomi-download', [download_files],
+            include_directories: [download_inc],
+            dependencies : [download_dep])

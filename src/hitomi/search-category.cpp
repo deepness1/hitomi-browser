@@ -10,11 +10,11 @@ auto fetch_ids(const char* const url) -> std::vector<hitomi::GalleryID> {
     if(!buffer) {
         return {};
     }
-    const auto len = buffer.value().size() / 4;
+    const auto len = buffer.value().size() / sizeof(uint32_t);
     auto       arr = ByteReader(buffer.value());
     auto       ids = std::vector<hitomi::GalleryID>(len);
     for(size_t i = 0; i < len; ++i) {
-        ids[i] = *arr.read<uint32_t>();
+        ids[i] = arr.read_32_endian();
     }
     return ids;
 }

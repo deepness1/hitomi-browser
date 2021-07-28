@@ -58,7 +58,7 @@ auto fetch_ids_with_range(Range range, uint64_t index_version) -> std::vector<Ga
 
     const auto buffer_length        = buffer.size();
     auto       arr                  = ByteReader(buffer);
-    const auto number_of_galleryids = *arr.read<uint32_t>();
+    const auto number_of_galleryids = arr.read_32_endian();
     if(number_of_galleryids > 10000000) {
         throw std::runtime_error("too many galleryids.");
     }
@@ -68,12 +68,12 @@ auto fetch_ids_with_range(Range range, uint64_t index_version) -> std::vector<Ga
     }
     auto ids = std::vector<GalleryID>();
     for(size_t i = 0; i < number_of_galleryids; ++i) {
-        ids.emplace_back(*arr.read<uint32_t>());
+        ids.emplace_back(arr.read_32_endian());
     }
     return ids;
 }
 auto calc_sha256(const char* const string) -> std::vector<uint8_t> {
-    auto digest  = std::vector<uint8_t>();
+    auto digest  = std::vector<uint8_t>(SHA256_DIGEST_LENGTH);
     auto sha_ctx = SHA256_CTX();
     SHA256_Init(&sha_ctx);
     SHA256_Update(&sha_ctx, string, std::strlen(string));

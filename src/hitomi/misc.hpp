@@ -4,6 +4,8 @@
 #include <optional>
 #include <vector>
 
+#include <linux/byteorder/little_endian.h>
+
 namespace hitomi {
 using Range = std::array<uint64_t, 2>;
 auto download_binary(const char* url, const char* range = nullptr, const char* referer = nullptr, int timeout = 5) -> std::optional<std::vector<uint8_t>>;
@@ -28,6 +30,14 @@ class ByteReader {
     }
     auto read(const size_t offset, const size_t size) const  -> std::vector<uint8_t> {
         return std::vector<uint8_t>(data + offset, data + offset + size);
+    }
+    auto read_32_endian() -> uint32_t {
+        pos += 4;
+        return __be32_to_cpup(reinterpret_cast<const __be32*>(&data[pos - 4]));
+    }
+    auto read_64_endian() -> uint64_t {
+        pos += 8;
+        return __be64_to_cpup(reinterpret_cast<const __be64*>(&data[pos - 8]));
     }
     ByteReader(const std::vector<uint8_t>& data) : data(data.data()), lim(data.size()){};
     ByteReader(const uint8_t* data, const size_t limit) : data(data), lim(limit) {}

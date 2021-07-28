@@ -47,25 +47,25 @@ auto Node::get_subnode_address(const uint64_t index) const -> uint64_t {
 Node::Node(std::vector<uint8_t> bytes) {
     auto arr = ByteReader(bytes);
 
-    const auto keys_limit = *arr.read<uint32_t>();
+    const auto keys_limit = arr.read_32_endian();
     for(size_t i = 0; i < keys_limit; ++i) {
-        const auto key_size = *arr.read<uint32_t>();
+        const auto key_size = arr.read_32_endian();
         if(key_size > 32) {
             throw std::runtime_error("keysize is too long.");
         }
         keys.emplace_back(arr.read(key_size));
     }
 
-    const auto datas_limit = *arr.read<uint32_t>();
+    const auto datas_limit = arr.read_32_endian();
     for(size_t i = 0; i < datas_limit; ++i) {
-        const auto offset = *arr.read<uint64_t>();
-        const auto length = *arr.read<uint32_t>();
+        const auto offset = arr.read_64_endian();
+        const auto length = arr.read_32_endian();
         datas.emplace_back(Range{offset, offset + length - 1});
     }
 
     constexpr auto NUMBER_OF_SUBNODE_ADDRESSES = 16 + 1;
     for(size_t i = 0; i < NUMBER_OF_SUBNODE_ADDRESSES; ++i) {
-        const auto address = *arr.read<uint64_t>();
+        const auto address = arr.read_64_endian();
         subnode_addresses.emplace_back(address);
     }
 }
