@@ -255,10 +255,10 @@ void Browser::window_resize_callback() {
     adjust_cache();
 }
 Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app), temporary_directory("/tmp/hitomi-browser") {
-    tab_font              = gawl::TextRender({"/usr/share/fonts/TTF/CascadiaCode.ttf"}, 24);
+    tab_font              = gawl::TextRender({"/usr/share/fonts/cascadia-code/CascadiaCode.ttf"}, 24);
     gallary_contents_font = gawl::TextRender({"/usr/share/fonts/noto-cjk/NotoSansCJK-Black.ttc", "/home/mojyack/documents/fonts/seguiemj.ttf"}, 22);
-    input_font            = gawl::TextRender({"/usr/share/fonts/TTF/CascadiaCode.ttf"}, 24);
-    work_info_font        = gawl::TextRender({"/usr/share/fonts/TTF/CascadiaCode.ttf", "/home/mojyack/documents/fonts/seguiemj.ttf"}, 20);
+    input_font            = gawl::TextRender({"/usr/share/fonts/cascadia-code/CascadiaCode.ttf"}, 24);
+    work_info_font        = gawl::TextRender({"/usr/share/fonts/cascadia-code/CascadiaCode.ttf", "/home/mojyack/documents/fonts/seguiemj.ttf"}, 20);
     set_event_driven(true);
     hitomi::init_hitomi();
 
