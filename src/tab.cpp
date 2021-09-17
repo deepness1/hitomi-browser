@@ -3,22 +3,22 @@
 #include "tab.hpp"
 
 namespace {
-void reset_order(std::vector<hitomi::GalleryID>& data) {
+auto reset_order(std::vector<hitomi::GalleryID>& data) -> void {
     std::sort(data.begin(), data.end(), std::greater<hitomi::GalleryID>());
     data.erase(std::unique(data.begin(), data.end()), data.end());
 }
 } // namespace
 
-bool Tab::search_and_set_index(hitomi::GalleryID i) {
-    auto p = std::find(data.begin(), data.end(), i);
+auto Tab::search_and_set_index(const hitomi::GalleryID i) -> bool {
+    const auto p = std::find(data.begin(), data.end(), i);
     if(p != data.end()) {
         index = std::distance(data.begin(), p);
         return true;
     }
     return false;
 }
-void Tab::append(hitomi::GalleryID t) {
-    hitomi::GalleryID current = -1;
+auto Tab::append(const hitomi::GalleryID t) -> void {
+    auto current = hitomi::GalleryID(-1);
     if(valid_index(index)) {
         current = data[index];
     }
@@ -28,8 +28,8 @@ void Tab::append(hitomi::GalleryID t) {
         search_and_set_index(current);
     }
 }
-void Tab::append(std::vector<hitomi::GalleryID>& t) {
-    hitomi::GalleryID current = -1;
+auto Tab::append(std::vector<hitomi::GalleryID>& t) -> void {
+    auto current = hitomi::GalleryID(-1);
     if(valid_index(index)) {
         current = data[index];
     }
@@ -39,22 +39,22 @@ void Tab::append(std::vector<hitomi::GalleryID>& t) {
         search_and_set_index(current);
     }
 }
-void Tab::set_retrieve(std::vector<hitomi::GalleryID>&& ids) {
+auto Tab::set_retrieve(std::vector<hitomi::GalleryID>&& ids) -> void {
     reset_order(ids);
     if(!valid_index(index)) {
         data  = ids;
         index = data.empty() ? -1 : 0;
         return;
     }
-    uint64_t new_index = -1;
+    auto new_index = uint64_t(-1);
     for(uint64_t i = 0; i < data.size() * 2; i += 1) {
-        int64_t const search_index = index + (i == 0 ? 0 : i % 2 == 1 ? i / 2 + 1
-                                                                      : -i / 2);
+        const auto search_index = int64_t(index + (i == 0 ? 0 : i % 2 == 1 ? i / 2 + 1
+                                                                           : -i / 2));
         if(!valid_index(search_index)) {
             continue;
         }
-        hitomi::GalleryID const search_id = data[search_index];
-        auto const              pos       = std::lower_bound(ids.rbegin(), ids.rend(), search_id);
+        const auto search_id = hitomi::GalleryID(data[search_index]);
+        const auto pos       = std::lower_bound(ids.rbegin(), ids.rend(), search_id);
         if(pos == ids.rend() || *pos != search_id) {
             continue;
         }
@@ -68,26 +68,26 @@ void Tab::set_retrieve(std::vector<hitomi::GalleryID>&& ids) {
         index = data.empty() ? -1 : 0;
     }
 }
-void Tab::dump(std::ofstream& file) {
+auto Tab::dump(std::ofstream& file) const -> void {
     // title
-    size_t ltitle = title.size();
-    file.write(reinterpret_cast<char*>(&ltitle), (std::streamsize)sizeof(ltitle));
-    file.write(reinterpret_cast<char*>(title.data()), ltitle);
+    const auto ltitle = title.size();
+    file.write(reinterpret_cast<const char*>(&ltitle), (std::streamsize)sizeof(ltitle));
+    file.write(reinterpret_cast<const char*>(title.data()), ltitle);
     // type
-    file.write(reinterpret_cast<char*>(&type), sizeof(type));
+    file.write(reinterpret_cast<const char*>(&type), sizeof(type));
     if(type != TabType::reading) {
         // ids
-        size_t ndata = data.size();
-        file.write(reinterpret_cast<char*>(&ndata), sizeof(ndata));
-        file.write(reinterpret_cast<char*>(&index), sizeof(index));
+        const auto ndata = data.size();
+        file.write(reinterpret_cast<const char*>(&ndata), sizeof(ndata));
+        file.write(reinterpret_cast<const char*>(&index), sizeof(index));
         if(!data.empty()) {
-            file.write(reinterpret_cast<char*>(data.data()), data.size() * sizeof(hitomi::GalleryID));
+            file.write(reinterpret_cast<const char*>(data.data()), data.size() * sizeof(hitomi::GalleryID));
         }
     }
 }
-void Tab::load(std::ifstream& file) {
+auto Tab::load(std::ifstream& file) -> void {
     // title
-    size_t ltitle;
+    auto ltitle = size_t();
     file.read(reinterpret_cast<char*>(&ltitle), sizeof(ltitle));
     title.resize(ltitle);
     file.read(reinterpret_cast<char*>(title.data()), ltitle);
@@ -95,7 +95,7 @@ void Tab::load(std::ifstream& file) {
     file.read(reinterpret_cast<char*>(&type), sizeof(type));
     if(type != TabType::reading) {
         // ids
-        size_t ndata;
+        auto ndata = size_t();
         file.read(reinterpret_cast<char*>(&ndata), sizeof(ndata));
         file.read(reinterpret_cast<char*>(&index), sizeof(index));
         if(ndata != 0) {
@@ -105,16 +105,16 @@ void Tab::load(std::ifstream& file) {
     }
 }
 
-void Tabs::dump(std::ofstream& file) {
-    size_t ntabs = data.size();
-    file.write(reinterpret_cast<char*>(&ntabs), sizeof(ntabs));
-    file.write(reinterpret_cast<char*>(&index), sizeof(index));
-    for(auto& t : data) {
+auto Tabs::dump(std::ofstream& file) const -> void {
+    const auto ntabs = data.size();
+    file.write(reinterpret_cast<const char*>(&ntabs), sizeof(ntabs));
+    file.write(reinterpret_cast<const char*>(&index), sizeof(index));
+    for(const auto& t : data) {
         t.dump(file);
     }
 }
-void Tabs::load(std::ifstream& file) {
-    size_t ntabs;
+auto Tabs::load(std::ifstream& file) -> void {
+    auto ntabs = size_t();
     file.read(reinterpret_cast<char*>(&ntabs), sizeof(ntabs));
     file.read(reinterpret_cast<char*>(&index), sizeof(index));
     data.resize(ntabs);

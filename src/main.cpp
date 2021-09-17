@@ -1,7 +1,7 @@
 #include "browser.hpp"
 
 int main() {
-    gawl::WaylandApplication app;
+    auto app = gawl::WaylandApplication();
     app.open_window<Browser>();
     app.run();
     return 0;

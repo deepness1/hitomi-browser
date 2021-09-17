@@ -1,7 +1,7 @@
 #include "browser.hpp"
 
 namespace {
-char keycode_to_char(uint32_t code, bool shift) {
+auto keycode_to_char(const uint32_t code, const bool shift) -> char {
     constexpr struct {
         uint32_t code;
         char     chara[2];
@@ -55,8 +55,8 @@ char keycode_to_char(uint32_t code, bool shift) {
         {KEY_APOSTROPHE, {'\'', '"'}},
         {KEY_SEMICOLON, {';', ':'}},
     };
-    constexpr size_t table_limit = sizeof(table) / sizeof(table[0]);
-    for(size_t i = 0; i < table_limit; ++i) {
+    constexpr auto table_limit = sizeof(table) / sizeof(table[0]);
+    for(auto i = size_t(0); i < table_limit; ++i) {
         if(code == table[i].code) {
             return table[i].chara[shift];
         }
@@ -65,7 +65,7 @@ char keycode_to_char(uint32_t code, bool shift) {
 }
 } // namespace
 
-void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
+auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> void {
     constexpr auto NEXT_WORK         = KEY_RIGHT;
     constexpr auto PREV_WORK         = KEY_PAGEDOWN;
     constexpr auto SCALE_UP          = KEY_EQUAL;
@@ -160,9 +160,9 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
         }
     }
 
-    const static std::array ADJUST_TRIGGER_KEYS = {NEXT_WORK, PREV_WORK, NEXT_TAB, PREV_TAB, REMOVE_WORK};
+    const static auto ADJUST_TRIGGER_KEYS = std::array{NEXT_WORK, PREV_WORK, NEXT_TAB, PREV_TAB, REMOVE_WORK};
 
-    bool do_refresh = false;
+    auto do_refresh = false;
     if(state == gawl::ButtonState::press) {
         if(auto p = std::find(ADJUST_TRIGGER_KEYS.begin(), ADJUST_TRIGGER_KEYS.end(), key); p != ADJUST_TRIGGER_KEYS.end()) {
             key_press_count++;
@@ -172,17 +172,18 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
     case NEXT_WORK:
     case PREV_WORK:
         if(state == gawl::ButtonState::press || state == gawl::ButtonState::repeat) {
-            std::lock_guard<std::mutex> lock(tabs.mutex);
-
-            auto tab_ptr = tabs.data.current();
-            if(tab_ptr == nullptr) return;
+            const auto lock    = tabs.get_lock();
+            const auto tab_ptr = tabs.data.current();
+            if(tab_ptr == nullptr) {
+                return;
+            }
             auto& tab = *tab_ptr;
             if(!shift) {
                 if((key == NEXT_WORK && tab++) || (key == PREV_WORK && tab--)) {
                     do_refresh = true;
                 }
             } else {
-                int d = (get_window_size()[1] / Layout::gallery_contents_height) * 0.7;
+                auto d = int((get_window_size()[1] / Layout::gallery_contents_height) * 0.7);
                 if((key == NEXT_WORK && (tab += d)) || (key == PREV_WORK && (tab -= d))) {
                     do_refresh = true;
                 }
@@ -203,14 +204,14 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
     case NEXT_TAB:
     case PREV_TAB:
         if(state == gawl::ButtonState::press || state == gawl::ButtonState::repeat) {
-            std::lock_guard<std::mutex> lock(tabs.mutex);
+            const auto lock = tabs.get_lock();
             if(!shift) {
                 if((key == NEXT_TAB && tabs.data++) || (key == PREV_TAB && tabs.data--)) {
                     do_refresh = true;
                 }
             } else {
-                auto current   = tabs.data.current();
-                auto swap_with = tabs.data.get_index() + (key == NEXT_TAB ? 1 : -1);
+                const auto current   = tabs.data.current();
+                const auto swap_with = tabs.data.get_index() + (key == NEXT_TAB ? 1 : -1);
                 if(current != nullptr && tabs.data.valid_index(swap_with)) {
                     std::swap(*current, *tabs.data[swap_with]);
                     if(key == NEXT_TAB) {
@@ -230,10 +231,10 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
             }
         } else {
             {
-                std::lock_guard<std::mutex> lock(tabs.mutex);
-                Tab                         tab;
-                tab.title = input_buffer;
-                tab.type  = TabType::normal;
+                const auto lock = tabs.get_lock();
+                auto       tab  = Tab();
+                tab.title       = input_buffer;
+                tab.type        = TabType::normal;
                 tabs.data.append(tab);
             }
             do_refresh = true;
@@ -244,8 +245,8 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
             break;
         }
         {
-            std::lock_guard<std::mutex> lock(tabs.mutex);
-            auto                        index = tabs.data.get_index();
+            const auto lock  = tabs.get_lock();
+            const auto index = tabs.data.get_index();
             if(index != -1 && !tabs.data[index]->searching) {
                 auto& tab = *tabs.data.current();
                 if(tab.type != TabType::reading) {
@@ -267,7 +268,7 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
             break;
         }
         {
-            std::lock_guard<std::mutex> lock(tabs.mutex);
+            const auto lock = tabs.get_lock();
             tabs.data.append(std::move(last_deleted.value()));
             last_deleted.reset();
         }
@@ -279,14 +280,14 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
                 break;
             }
             if(shift) {
-                std::string artist;
+                auto artist = std::string();
                 do {
                     auto const p = get_current_work();
                     if(p == nullptr) {
                         break;
                     }
-                    hitomi::GalleryID id = *p;
-                    std::lock_guard<std::mutex> lock(cache.mutex);
+                    const auto id   = *p;
+                    const auto lock = cache.get_lock();
                     if(auto w = cache.data.find(id); w != cache.data.end()) {
                         if(!w->second) {
                             break;
@@ -305,9 +306,8 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
             }
         } else {
             {
-                std::lock_guard<std::mutex> lock(tabs.mutex);
-
-                Tab tab{.title = "searching...", .type = TabType::search, .searching = true};
+                const auto lock = tabs.get_lock();
+                auto       tab  = Tab{.title = "searching...", .type = TabType::search, .searching = true};
                 tabs.data.append(tab);
             }
             search(input_buffer);
@@ -316,13 +316,13 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
         break;
     case SEND_WORK:
         if(!input_result) {
-            bool current_exits;
+            auto current_exits = bool();
             {
-                std::lock_guard<std::mutex> lock(tabs.mutex);
-                current_exits = get_current_work() != nullptr;
+                const auto lock = tabs.get_lock();
+                current_exits   = get_current_work() != nullptr;
             }
             if(current_exits && state == gawl::ButtonState::press) {
-                std::string prompt;
+                auto prompt = std::string();
                 if(!last_sent_tab.empty()) {
                     prompt = "send to(" + last_sent_tab + "): ";
                 } else {
@@ -331,19 +331,19 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
                 input(key, prompt.data());
             }
         } else {
-            bool              success     = false;
-            bool              do_download = false;
-            hitomi::GalleryID download_id;
+            auto success     = false;
+            auto do_download = false;
+            auto download_id = hitomi::GalleryID();
             if(input_buffer.empty()) {
                 if(!last_sent_tab.empty()) {
                     input_buffer = last_sent_tab;
                 }
             }
             if(!input_buffer.empty()) {
-                std::lock_guard<std::mutex> lock(tabs.mutex);
+                const auto lock = tabs.get_lock();
                 for(auto& t : tabs.data) {
                     if(t.title == input_buffer && t.type != TabType::search) {
-                        auto c = get_current_work();
+                        const auto c = get_current_work();
                         if(c != nullptr && !t.contains(*c)) {
                             t.append(*c);
                             if(t.type == TabType::reading) {
@@ -356,7 +356,7 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
                     }
                 }
             }
-            std::string message;
+            auto message = std::string();
             if(success) {
                 last_sent_tab = input_buffer;
                 message       = "sent to " + last_sent_tab;
@@ -373,14 +373,13 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
         break;
     case REMOVE_WORK:
         if(state != gawl::ButtonState::release) {
-            std::lock_guard<std::mutex> lock(tabs.mutex);
-
-            auto current = get_current_work();
+            const auto lock    = tabs.get_lock();
+            const auto current = get_current_work();
             if(current == nullptr) {
                 break;
             }
-            auto& tab   = *tabs.data.current();
-            auto  index = tab.get_index();
+            auto&      tab   = *tabs.data.current();
+            const auto index = tab.get_index();
             if(tab.type == TabType::reading) {
                 cancel_download(*tab[index]);
                 delete_downloaded(*tab[index]);
@@ -395,7 +394,7 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
                 input(key, "jump to: ");
             }
         } else {
-            int direction = 0;
+            auto direction = int(0);
             if(input_buffer[0] == '+') {
                 direction = 1;
             } else if(input_buffer[0] == '-') {
@@ -404,17 +403,17 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
             if(direction != 0) {
                 input_buffer = &input_buffer[1];
             }
-            bool success = false;
+            auto success = false;
             do {
-                int p;
+                auto p = int();
                 try {
                     p = std::stoi(input_buffer.data());
                 } catch(const std::invalid_argument&) {
                     break;
                 }
                 {
-                    std::lock_guard<std::mutex> lock(tabs.mutex);
-                    auto                        tab_ptr = tabs.data.current();
+                    const auto lock    = tabs.get_lock();
+                    const auto tab_ptr = tabs.data.current();
                     if(tab_ptr == nullptr) {
                         break;
                     }
@@ -430,30 +429,29 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
                     show_message("out of range.");
                 }
                 do_refresh = true;
-
             } while(0);
         }
         break;
     case DOWNLOAD:
         if(state == gawl::ButtonState::press) {
-            bool              do_open     = false;
-            bool              do_download = false;
-            hitomi::GalleryID target_id;
+            auto do_open     = false;
+            auto do_download = false;
+            auto target_id   = hitomi::GalleryID();
             {
-                std::lock_guard<std::mutex> lock(tabs.mutex);
-                auto                        p = tabs.data.current();
+                const auto lock = tabs.get_lock();
+                const auto p    = tabs.data.current();
                 if(p == nullptr) {
                     break;
                 }
                 if(p->type != TabType::reading) {
-                    hitomi::GalleryID w;
+                    auto w = hitomi::GalleryID();
                     if(auto p = get_current_work(); p == nullptr) {
                         break;
                     } else {
                         w = *p;
                     }
 
-                    Tab* reading = nullptr;
+                    auto reading = (Tab*)(nullptr);
                     while(1) {
                         for(auto& t : tabs.data) {
                             if(t.type == TabType::reading) {
@@ -483,10 +481,10 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
                 do_refresh = true;
             }
             if(do_open) {
-                std::lock_guard<std::mutex> lock(download_progress.mutex);
+                const auto lock = download_progress.get_lock();
                 if(download_progress.data.contains(target_id)) {
-                    auto& progress = download_progress.data[target_id];
-                    bool  complete = true;
+                    const auto& progress = download_progress.data[target_id];
+                    auto        complete = true;
                     for(auto c : progress.second) {
                         if(!c) {
                             complete = false;
@@ -494,7 +492,7 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
                         }
                     }
                     if(complete) {
-                        std::string command = "imgview \"" + progress.first + "\"";
+                        const auto command = std::string("imgview \"") + progress.first + "\"";
                         run_command(command.data());
                     }
                 }
@@ -533,10 +531,10 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
             if(state != gawl::ButtonState::press) {
                 break;
             }
-            std::string title;
+            auto title = std::string();
             {
-                std::lock_guard<std::mutex> lock(tabs.mutex);
-                auto                        p = tabs.data.current();
+                const auto lock = tabs.get_lock();
+                const auto p    = tabs.data.current();
                 if(p == nullptr) {
                     break;
                 }
@@ -544,14 +542,12 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
             }
             input(key, "rename: ", title.data());
         } else {
-            {
-                std::lock_guard<std::mutex> lock(tabs.mutex);
-                auto                        p = tabs.data.current();
-                if(p == nullptr) {
-                    break;
-                }
-                p->title = std::move(input_buffer);
+            const auto lock = tabs.get_lock();
+            const auto p    = tabs.data.current();
+            if(p == nullptr) {
+                break;
             }
+            p->title = std::move(input_buffer);
         }
         do_refresh = true;
         break;
@@ -559,16 +555,14 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
         if(state != gawl::ButtonState::press) {
             break;
         }
-        {
-            std::lock_guard<std::mutex> lock(tabs.mutex);
-            if(auto tab_ptr = tabs.data.current(); tab_ptr != nullptr && tab_ptr->type == TabType::search) {
-                tab_ptr->searching = true;
-                search(tab_ptr->title);
-                tab_ptr->title = "refreshing...";
-                do_refresh     = true;
-            } else {
-                break;
-            }
+        const auto lock = tabs.get_lock();
+        if(const auto tab_ptr = tabs.data.current(); tab_ptr != nullptr && tab_ptr->type == TabType::search) {
+            tab_ptr->searching = true;
+            search(tab_ptr->title);
+            tab_ptr->title = "refreshing...";
+            do_refresh     = true;
+        } else {
+            break;
         }
         break;
     }
@@ -576,7 +570,7 @@ void Browser::keyboard_callback(uint32_t key, gawl::ButtonState state) {
         refresh();
     }
     if(key_press_count > 0 && (!do_refresh || state == gawl::ButtonState::release)) {
-        if(auto p = std::find(ADJUST_TRIGGER_KEYS.begin(), ADJUST_TRIGGER_KEYS.end(), key); p != ADJUST_TRIGGER_KEYS.end()) {
+        if(const auto p = std::find(ADJUST_TRIGGER_KEYS.begin(), ADJUST_TRIGGER_KEYS.end(), key); p != ADJUST_TRIGGER_KEYS.end()) {
             key_press_count--;
             if(key_press_count == 0) {
                 adjust_cache();

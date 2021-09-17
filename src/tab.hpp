@@ -13,29 +13,35 @@ class IndexData {
     using iterator       = typename std::vector<T>::iterator;
 
   public:
-    iterator begin() {
+    auto begin() -> iterator {
         return data.begin();
     }
-    iterator end() {
+    auto end() -> iterator {
         return data.end();
     }
-    void append(T&& n) {
-        data.emplace_back(std::move(n));
+    auto append(T&& n) -> void {
+        data.emplace_back(n);
         if(index == -1) {
             index = 0;
         }
     }
-    void append(T& n) {
+    auto append(T& n) -> void {
         append(std::move(n));
     }
-    void append(std::vector<T>& n) {
-        if(n.empty()) return;
+    auto append(const T& n) -> void {
+        auto v = n;
+        append(std::move(v));
+    }
+    auto append(const std::vector<T>& n) -> void {
+        if(n.empty()) {
+            return;
+        }
         std::copy(n.begin(), n.end(), std::back_inserter(data));
         if(index == -1) {
             index = 0;
         }
     }
-    void erase(int64_t i) {
+    auto erase(const int64_t i) -> void {
         if(!valid_index(i)) {
             return;
         }
@@ -48,58 +54,58 @@ class IndexData {
         }
         data.erase(data.begin() + i);
     }
-    bool is_current(int64_t t) {
+    auto is_current(const int64_t t) -> bool {
         return t == index;
     }
-    bool is_current(T& t) {
+    auto is_current(const T& t) -> bool {
         return &t == current();
     }
-    int64_t get_index() const {
+    auto get_index() const -> int64_t {
         return index;
     }
-    bool valid_index(int64_t i) const noexcept {
+    auto valid_index(int64_t i) const -> bool {
         return i >= 0 && i <= index_limit();
     }
-    int64_t size() const noexcept {
+    auto size() const -> int64_t {
         return data.size();
     }
-    int64_t index_limit() const noexcept {
+    auto index_limit() const -> int64_t {
         return data.size() - 1;
     }
-    bool set_index(int64_t i) {
+    auto set_index(const int64_t i) -> bool {
         if(!valid_index(i)) {
             return false;
         }
         index = i;
         return true;
     }
-    bool contains(T const& i) {
+    auto contains(const T& i) -> bool {
         return std::find(data.begin(), data.end(), i) != data.end();
     }
-    T* current() {
+    auto current() -> T* {
         if(index == -1) {
             return nullptr;
         } else {
             return &(data[index]);
         }
     }
-    T* operator[](int64_t i) noexcept {
+    auto operator[](const int64_t i) -> T* {
         return &(data[i]);
     }
-    bool operator++(int) {
+    auto operator++(const int) -> bool {
         return operator+=(1);
     }
-    bool operator--(int) {
+    auto operator--(const int) -> bool {
         return operator-=(1);
     }
-    bool operator+=(int d) {
+    auto operator+=(const int d) -> bool {
         if(index == -1 || !valid_index(index + d)) {
             return false;
         }
         index += d;
         return true;
     }
-    bool operator-=(int d) {
+    auto operator-=(const int d) -> bool {
         if(index == -1 || !valid_index(index - d)) {
             return false;
         }
@@ -110,30 +116,30 @@ class IndexData {
 
 struct Tab : public IndexData<hitomi::GalleryID> {
   private:
-    bool search_and_set_index(hitomi::GalleryID i);
+    auto search_and_set_index(hitomi::GalleryID i) -> bool;
 
   public:
     std::string title;
     TabType     type;
     bool        searching = false;
 
-    void append(hitomi::GalleryID t);
-    void append(std::vector<hitomi::GalleryID>& t);
-    void set_retrieve(std::vector<hitomi::GalleryID>&& ids);
-    void dump(std::ofstream& file);
-    void load(std::ifstream& file);
+    auto append(hitomi::GalleryID t) -> void;
+    auto append(std::vector<hitomi::GalleryID>& t) -> void;
+    auto set_retrieve(std::vector<hitomi::GalleryID>&& ids) -> void;
+    auto dump(std::ofstream& file) const -> void;
+    auto load(std::ifstream& file) -> void;
 };
 
 struct Tabs : public IndexData<Tab> {
-    void dump(std::ofstream& file);
-    void load(std::ifstream& file);
+    auto dump(std::ofstream& file) const -> void;
+    auto load(std::ifstream& file) -> void;
 };
 
 struct WorkWithThumbnail {
-    hitomi::Work      work;
-    gawl::Graphic     thumbnail;
+    hitomi::Work         work;
+    gawl::Graphic        thumbnail;
     std::vector<uint8_t> thumbnail_buffer;
-    WorkWithThumbnail(hitomi::GalleryID id) : work(id) {
+    WorkWithThumbnail(const hitomi::GalleryID id) : work(id) {
         work.download_info();
         auto buf = work.get_thumbnail();
         if(buf.has_value()) {

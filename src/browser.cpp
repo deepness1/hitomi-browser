@@ -1,35 +1,18 @@
-#include <chrono>
-#include <cstddef>
-#include <cstdlib>
 #include <filesystem>
 #include <fstream>
-#include <memory>
-#include <mutex>
-#include <string>
-
-#include <bits/stdint-intn.h>
-#include <bits/stdint-uintn.h>
-#include <linux/input-event-codes.h>
 
 #include "browser.hpp"
-#include "gawl/graphic.hpp"
-#include "gawl/misc.hpp"
-#include "gawl/textrender.hpp"
-#include "gawl/type.hpp"
-#include "hitomi/type.hpp"
-#include "hitomi/work.hpp"
-#include "type.hpp"
 
 namespace {
 struct SaveData {
     int64_t layout_type;
     double  split_rate[2];
 };
-std::string replace_illeggal_chara(std::string const& str) {
-    constexpr std::array illegal_charas = {'/'};
-    std::string          ret;
+auto replace_illeggal_chara(std::string const& str) -> std::string {
+    constexpr auto illegal_charas = std::array{'/'};
+    auto           ret            = std::string();
     for(auto c : str) {
-        char n;
+        auto n = char();
         if(auto p = std::find(illegal_charas.begin(), illegal_charas.end(), c); p != illegal_charas.end()) {
             n = ' ';
         } else {
@@ -41,22 +24,22 @@ std::string replace_illeggal_chara(std::string const& str) {
 }
 } // namespace
 
-void Browser::adjust_cache() {
-    std::vector<hitomi::GalleryID> visible;
+auto Browser::adjust_cache() -> void {
+    auto visible = std::vector<hitomi::GalleryID>();
     {
-        std::lock_guard<std::mutex> lock(tabs.mutex);
+        const auto lock = tabs.get_lock();
         for(auto& t : tabs.data) {
-            auto range = calc_visible_range(t);
-            for(int64_t i = range[0]; i <= range[1]; ++i) {
+            const auto range = calc_visible_range(t);
+            for(auto i = range[0]; i <= range[1]; ++i) {
                 visible.emplace_back(*t[i]);
             }
         }
     }
     std::sort(visible.begin(), visible.end());
     visible.erase(std::unique(visible.begin(), visible.end()), visible.end());
-    Cache new_cache;
+    auto new_cache = Cache();
     {
-        std::lock_guard<std::mutex> lock(cache.mutex);
+        const auto lock = cache.get_lock();
         for(auto i : visible) {
             if(auto w = cache.data.find(i); w == cache.data.end() || (w->second != nullptr && !w->second->work.has_info())) {
                 request_download_cache(i);
@@ -67,14 +50,14 @@ void Browser::adjust_cache() {
         cache.data = std::move(new_cache);
     }
 }
-void Browser::request_download_cache(hitomi::GalleryID id) {
-    std::lock_guard<std::mutex> lock(cache_queue.mutex);
+auto Browser::request_download_cache(const hitomi::GalleryID id) -> void {
+    const auto lock = cache_queue.get_lock();
     cache_queue.data.emplace_back(id);
     cache_event.wakeup();
 }
-std::array<gawl::Area, 2> Browser::calc_layout() {
-    gawl::Area gallery_contents_area;
-    gawl::Area preview_area;
+auto Browser::calc_layout() -> std::array<gawl::Area, 2> {
+    auto gallery_contents_area = gawl::Area();
+    auto preview_area          = gawl::Area();
     if(layout_type != 0 && layout_type != 1) {
         layout_type = 1;
     }
@@ -103,15 +86,15 @@ std::array<gawl::Area, 2> Browser::calc_layout() {
     }
     return {gallery_contents_area, preview_area};
 }
-std::array<int64_t, 2> Browser::calc_visible_range(Tab& tab) {
+auto Browser::calc_visible_range(Tab& tab) -> std::array<int64_t, 2> {
     auto selected_index = tab.get_index();
     if(selected_index == -1) {
         return {-1, -2};
     }
-    auto                   layout        = calc_layout();
-    int64_t                visible_num   = (layout[0][3] - layout[0][1]) / Layout::gallery_contents_height + 1;
-    int64_t                visible_head  = selected_index - visible_num / 2;
-    std::array<int64_t, 2> visible_range = {visible_head, visible_head + visible_num};
+    const auto layout        = calc_layout();
+    const auto visible_num   = int64_t((layout[0][3] - layout[0][1]) / Layout::gallery_contents_height + 1);
+    const auto visible_head  = int64_t(selected_index - visible_num / 2);
+    auto       visible_range = std::array{visible_head, visible_head + visible_num};
     if(!tab.valid_index(visible_range[0])) {
         visible_range[0] = 0;
     }
@@ -120,8 +103,8 @@ std::array<int64_t, 2> Browser::calc_visible_range(Tab& tab) {
     }
     return visible_range;
 }
-std::string Browser::get_display_string(hitomi::GalleryID id) {
-    std::lock_guard<std::mutex> lock(cache.mutex);
+auto Browser::get_display_string(const hitomi::GalleryID id) -> std::string {
+    const auto lock = cache.get_lock();
     if(auto w = cache.data.find(id); w != cache.data.end()) {
         if(w->second) {
             return w->second->work.get_display_name();
@@ -131,7 +114,7 @@ std::string Browser::get_display_string(hitomi::GalleryID id) {
     }
     return std::to_string(id);
 }
-gawl::Graphic Browser::get_thumbnail(hitomi::GalleryID id) {
+auto Browser::get_thumbnail(const hitomi::GalleryID id) -> gawl::Graphic {
     if(auto w = cache.data.find(id); w != cache.data.end()) {
         if(w->second) {
             if(!w->second->thumbnail_buffer.empty()) {
@@ -143,33 +126,33 @@ gawl::Graphic Browser::get_thumbnail(hitomi::GalleryID id) {
     }
     return gawl::Graphic();
 }
-hitomi::GalleryID* Browser::get_current_work() {
-    auto current_tab = tabs.data.current();
+auto Browser::get_current_work() -> hitomi::GalleryID* {
+    const auto current_tab = tabs.data.current();
     if(current_tab == nullptr) {
         return nullptr;
     }
-    auto current_work = current_tab->current();
+    const auto current_work = current_tab->current();
     if(current_work == nullptr) {
         return nullptr;
     }
     return current_work;
 }
-void Browser::show_message(const char* ptr) {
+auto Browser::show_message(const char* ptr) -> void {
     if(message_timer.joinable()) {
         message_event.wakeup();
         message_timer.join();
     }
     message.data  = ptr;
     message_timer = std::thread([this]() {
-        auto comp = !message_event.wait_for(std::chrono::seconds(1));
+        const auto comp = !message_event.wait_for(std::chrono::seconds(1));
         if(comp) {
-            std::lock_guard<std::mutex> lock(message.mutex);
+            const auto lock = message.get_lock();
             message.data.clear();
             refresh();
         }
     });
 }
-void Browser::input(uint32_t key, const char* prompt, const char* const init) {
+auto Browser::input(const uint32_t key, const char* const prompt, const char* const init) -> void {
     input_key    = key;
     input_prompt = prompt;
     input_cursor = 0;
@@ -184,14 +167,14 @@ void Browser::input(uint32_t key, const char* prompt, const char* const init) {
     }
     refresh();
 }
-void Browser::search(std::string arg) {
+auto Browser::search(const std::string arg) -> void {
     if(search_thread.joinable()) {
         search_thread.join();
     }
     search_thread = std::thread([arg, this]() {
         auto result = hitomi::search(arg.data());
         {
-            std::lock_guard<std::mutex> lock(tabs.mutex);
+            const auto lock = tabs.get_lock();
             for(auto& t : tabs.data) {
                 if(!t.searching) {
                     continue;
@@ -206,10 +189,10 @@ void Browser::search(std::string arg) {
         refresh();
     });
 }
-void Browser::download(hitomi::GalleryID id) {
-    std::lock_guard<std::mutex> lock(download_queue.mutex);
+auto Browser::download(const hitomi::GalleryID id) -> void {
+    const auto lock = download_queue.get_lock();
     {
-        std::lock_guard<std::mutex> lock(download_progress.mutex);
+        const auto lock = download_progress.get_lock();
         if(download_progress.data.contains(id)) {
             return;
         }
@@ -220,29 +203,27 @@ void Browser::download(hitomi::GalleryID id) {
     download_queue.data.emplace_back(id);
     download_event.wakeup();
 }
-void Browser::cancel_download(hitomi::GalleryID id) {
-    {
-        std::lock_guard<std::mutex> lock(download_queue.mutex);
-        if(auto p = std::find(download_queue.data.begin(), download_queue.data.end(), id); p != download_queue.data.end()) {
-            download_queue.data.erase(p);
-        } else {
-            // maybe downloading.
-            download_cancel_id.store(id);
-        }
+auto Browser::cancel_download(const hitomi::GalleryID id) -> void {
+    const auto lock = download_queue.get_lock();
+    if(auto p = std::find(download_queue.data.begin(), download_queue.data.end(), id); p != download_queue.data.end()) {
+        download_queue.data.erase(p);
+    } else {
+        // maybe downloading.
+        download_cancel_id.store(id);
     }
 }
-void Browser::delete_downloaded(hitomi::GalleryID id) {
-    std::lock_guard<std::mutex> lock(download_progress.mutex);
+auto Browser::delete_downloaded(const hitomi::GalleryID id) -> void {
+    const auto lock = download_progress.get_lock();
     if(download_progress.data.contains(id)) {
         std::filesystem::remove_all(download_progress.data[id].first);
         download_progress.data.erase(id);
     }
 }
-void Browser::run_command(const char* command) {
+auto Browser::run_command(const char* const command) -> void {
     if(external_command_thread.joinable()) {
         external_command_thread.join();
     }
-    std::string arg         = command;
+    const auto arg          = std::string(command);
     external_command_thread = std::thread([this, arg]() {
         auto result = system(arg.data());
         if(result != 0) {
@@ -251,10 +232,10 @@ void Browser::run_command(const char* command) {
         }
     });
 }
-void Browser::window_resize_callback() {
+auto Browser::window_resize_callback() -> void {
     adjust_cache();
 }
-Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app), temporary_directory("/tmp/hitomi-browser") {
+Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app, {.title = "hitomi browser"}), temporary_directory("/tmp/hitomi-browser") {
     tab_font              = gawl::TextRender({"/usr/share/fonts/cascadia-code/CascadiaCode.ttf"}, 24);
     gallary_contents_font = gawl::TextRender({"/usr/share/fonts/noto-cjk/NotoSansCJK-Black.ttc", "/home/mojyack/documents/fonts/seguiemj.ttf"}, 22);
     input_font            = gawl::TextRender({"/usr/share/fonts/cascadia-code/CascadiaCode.ttf"}, 24);
@@ -277,10 +258,10 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app), tempora
     for(size_t t = 0; t < CACHE_DOWNLOAD_THREADS; ++t) {
         cache_download_threads[t] = std::thread([this]() {
             while(!finish_subthreads) {
-                bool              queue_found = false;
-                hitomi::GalleryID id          = -1;
+                auto queue_found = false;
+                auto id          = hitomi::GalleryID(-1);
                 {
-                    std::lock_guard<std::mutex> lock(cache_queue.mutex);
+                    const auto lock = cache_queue.get_lock();
                     if(!cache_queue.data.empty()) {
                         queue_found = true;
                         id          = cache_queue.data.back();
@@ -288,12 +269,12 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app), tempora
                     }
                 }
                 if(queue_found) {
-                    auto is_visible = [id, this]() -> bool {
+                    const auto is_visible = [id, this]() -> bool {
                         // check if the id is still in visible range.
-                        std::lock_guard<std::mutex> lock(tabs.mutex);
+                        const auto lock = tabs.get_lock();
                         for(auto& tab : tabs.data) {
-                            auto range = calc_visible_range(tab);
-                            for(int64_t i = range[0]; i <= range[1]; ++i) {
+                            const auto range = calc_visible_range(tab);
+                            for(auto i = range[0]; i <= range[1]; ++i) {
                                 if(*tab[i] == id) {
                                     return true;
                                 } else if(*tab[i] < id) {
@@ -303,22 +284,25 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app), tempora
                         }
                         return false;
                     };
-                    if(!is_visible()) continue;
-                    bool not_found_in_cache = false;
+                    if(!is_visible()) {
+                        continue;
+                    }
+                    auto not_found_in_cache = false;
                     {
                         // check cache duplicates
-                        std::lock_guard<std::mutex> lock(cache.mutex);
-
+                        const auto lock    = cache.get_lock();
                         not_found_in_cache = cache.data.find(id) == cache.data.end();
                         if(not_found_in_cache) {
                             cache.data.emplace(id, nullptr); // store nullptr to indicate this thread will download the cache.
                         }
                     }
-                    if(!not_found_in_cache) continue;
+                    if(!not_found_in_cache) {
+                        continue;
+                    }
                     refresh();
                     auto w = new WorkWithThumbnail(id);
                     {
-                        std::lock_guard<std::mutex> lock(cache.mutex);
+                        const auto lock = cache.get_lock();
                         cache.data[id].reset(w);
                     }
                     refresh();
@@ -331,10 +315,10 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app), tempora
 
     download_thread = std::thread([this]() {
         while(!finish_subthreads) {
-            bool              do_download = false;
-            hitomi::GalleryID next;
+            auto do_download = false;
+            auto next        = hitomi::GalleryID();
             {
-                std::lock_guard<std::mutex> lock(download_queue.mutex);
+                const auto lock = download_queue.get_lock();
                 if(!download_queue.data.empty()) {
                     do_download = true;
                     next        = download_queue.data[0];
@@ -342,10 +326,9 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app), tempora
                 }
             }
             if(do_download) {
-                hitomi::Work w;
+                auto w = hitomi::Work();
                 {
-                    std::lock_guard<std::mutex> lock(cache.mutex);
-
+                    const auto lock = cache.get_lock();
                     if(cache.data.contains(next) && cache.data[next]) {
                         w = cache.data[next]->work;
                     }
@@ -355,22 +338,23 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app), tempora
                     w = hitomi::Work(next);
                     w.download_info();
                 }
-                std::string savedir = std::to_string(next);
-                if(std::string workname = savedir + " " + replace_illeggal_chara(w.get_display_name()); workname.size() < 256) {
-                    savedir = workname;
+                auto savedir = std::to_string(next);
+                if(auto workname = savedir + " " + replace_illeggal_chara(w.get_display_name()); workname.size() < 256) {
+                    savedir = std::move(workname);
                 }
-                std::string savepath = temporary_directory + "/" + savedir;
+                auto savepath = temporary_directory + "/" + savedir;
                 {
-                    std::lock_guard<std::mutex> lock(download_progress.mutex);
+                    const auto lock = download_progress.get_lock();
+
                     download_progress.data[next].first = savepath;
                     download_progress.data[next].second.resize(w.get_pages());
                 }
                 download_cancel_id.store(-1);
                 w.start_download(savepath.data(), IMAGE_DOWNLOAD_THREADS, true, [this, next](uint64_t page) -> bool {
-                    bool canceled;
+                    auto canceled = bool();
                     {
-                        std::lock_guard<std::mutex> lock(download_cancel_id.mutex);
-                        canceled = next == download_cancel_id.data;
+                        const auto lock = download_cancel_id.get_lock();
+                        canceled        = next == download_cancel_id.data;
                         if(!canceled) {
                             std::lock_guard<std::mutex> lock(download_progress.mutex);
                             download_progress.data[next].second[page] = true;
@@ -405,7 +389,7 @@ Browser::~Browser() {
     std::ofstream file(SAVEDATA_PATH, std::ios::out | std::ios::binary);
     file.write(reinterpret_cast<char*>(&save), sizeof(SaveData));
     {
-        std::lock_guard<std::mutex> lock(tabs.mutex);
+        const auto lock = tabs.get_lock();
         tabs.data.dump(file);
     }
     file.close();
@@ -415,7 +399,7 @@ Browser::~Browser() {
         message_event.wakeup();
         message_timer.join();
     }
-    for(size_t t = 0; t < CACHE_DOWNLOAD_THREADS; ++t) {
+    for(auto t = size_t(0); t < CACHE_DOWNLOAD_THREADS; ++t) {
         cache_download_threads[t].join();
     }
     if(search_thread.joinable()) {

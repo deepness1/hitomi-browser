@@ -14,7 +14,7 @@ struct ArgParseResult {
     std::vector<hitomi::GalleryID> ids;
 };
 auto parse_args(const int argc, const char* const argv[]) -> ArgParseResult {
-    int  help = 0, webp = 0;
+    auto help = int(0), webp = int(0);
     auto result = ArgParseResult();
 
     const auto   optstring  = "hwo:j:";
@@ -26,8 +26,8 @@ auto parse_args(const int argc, const char* const argv[]) -> ArgParseResult {
         {0, 0, 0, 0},
     };
 
-    int longindex = 0;
-    int c;
+    auto longindex = int(0);
+    auto c = int();
     while((c = getopt_long(argc, const_cast<char* const*>(argv), optstring, longopts, &longindex)) != -1) {
         switch(c) {
         case 'h':
@@ -55,7 +55,7 @@ auto parse_args(const int argc, const char* const argv[]) -> ArgParseResult {
 
     return result;
 }
-const auto HELP =
+constexpr const char* HELP =
     R"(Usage: hitomi-download [options] IDs ...
 Options:
     -h, --help          Print this help
@@ -67,7 +67,7 @@ auto replace_illeggal_chara(std::string const& str) -> std::string {
     constexpr auto illegal_charas = std::array{'/'};
     auto           ret            = std::string();
     for(auto c : str) {
-        char n;
+        auto n = char();
         if(auto p = std::find(illegal_charas.begin(), illegal_charas.end(), c); p != illegal_charas.end()) {
             n = ' ';
         } else {

@@ -1,8 +1,5 @@
 #pragma once
-#include <cstdint>
-
-#include "gawl/gawl.hpp"
-#include "gawl/type.hpp"
+#include <gawl.hpp>
 
 namespace Layout {
 constexpr double tabbar                       = 35;
