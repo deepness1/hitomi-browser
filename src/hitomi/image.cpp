@@ -51,7 +51,7 @@ Image::Image(const GalleryID id, const nlohmann::json& info) : id(id) {
     } catch(const std::invalid_argument&) {
         throw std::runtime_error("invalid hash");
     }
-    const int number_of_frontends = hash_num < 0x40 ? 2 : hash_num < 0x80 ? 1
+    const int number_of_frontends = hash_num < 0x44 ? 2 : hash_num < 0x88 ? 1
                                                                           : 0;
 
     const auto haswebp  = info.contains("haswebp") && (info["haswebp"].get<int>() == 1);
