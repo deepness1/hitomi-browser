@@ -1,4 +1,4 @@
-project('hitomi-browser', 'cpp', default_options : ['warning_level=3', 'werror=false', 'cpp_std=c++2a'])
+project('hitomi-browser', 'cpp', default_options : ['warning_level=3', 'werror=false', 'cpp_std=c++20'])
 
 subdir('src')
 

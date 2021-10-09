@@ -193,7 +193,10 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
     case SCALE_UP:
     case SCALE_DOWN:
         if(state == gawl::ButtonState::press && control) {
-            set_scale(get_scale() + (key == SCALE_DOWN ? -0.2 : 0.2));
+            const auto new_scale = get_scale() + (key == SCALE_DOWN ? -0.2 : 0.2);
+            if(new_scale >= 0.1) {
+                set_scale(new_scale);
+            }
         }
         break;
     case SCALE_RESET:

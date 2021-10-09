@@ -1,5 +1,5 @@
 #pragma once
-#include <gawl.hpp>
+#include <gawl/gawl.hpp>
 
 namespace Layout {
 constexpr double tabbar                       = 35;
@@ -23,7 +23,7 @@ constexpr gawl::Color tab[3] = {
 constexpr gawl::Color gallery_contents[2] = {
     {0x1c / 0xff.0p1, 0x1c / 0xff.0p1, 0x1c / 0xff.0p1, 1},
     {0x36 / 0xff.0p1, 0x36 / 0xff.0p1, 0x36 / 0xff.0p1, 1}};
-constexpr gawl::Color input_back = {0x2e / 0xff.0p1, 0x34 / 0xff.0p1, 0x40 / 0xff.0p1, 1.0};
+constexpr gawl::Color input_back            = {0x2e / 0xff.0p1, 0x34 / 0xff.0p1, 0x40 / 0xff.0p1, 1.0};
 constexpr gawl::Color download_complete_dot = {0, 1, 1, 1};
 constexpr gawl::Color download_progress_dot = {1, 1, 0, 1};
 } // namespace Color

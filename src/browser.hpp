@@ -1,5 +1,5 @@
 #pragma once
-#include <gawl.hpp>
+#include <gawl/gawl.hpp>
 
 #include "hitomi/hitomi.hpp"
 #include "tab.hpp"
@@ -50,7 +50,7 @@ class Browser : public gawl::WaylandWindow {
 
     auto adjust_cache() -> void;
     auto request_download_cache(hitomi::GalleryID id) -> void;
-    auto calc_layout() -> std::array<gawl::Area, 2>;
+    auto calc_layout() -> std::array<gawl::Rectangle, 2>;
     auto calc_visible_range(Tab& tab) -> std::array<int64_t, 2>;
     auto get_display_string(hitomi::GalleryID id) -> std::string;
     auto get_thumbnail(hitomi::GalleryID id) -> gawl::Graphic;

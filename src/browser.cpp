@@ -55,33 +55,33 @@ auto Browser::request_download_cache(const hitomi::GalleryID id) -> void {
     cache_queue.data.emplace_back(id);
     cache_event.wakeup();
 }
-auto Browser::calc_layout() -> std::array<gawl::Area, 2> {
-    auto gallery_contents_area = gawl::Area();
-    auto preview_area          = gawl::Area();
+auto Browser::calc_layout() -> std::array<gawl::Rectangle, 2> {
+    auto gallery_contents_area = gawl::Rectangle();
+    auto preview_area          = gawl::Rectangle();
     if(layout_type != 0 && layout_type != 1) {
         layout_type = 1;
     }
     const auto& size = get_window_size();
     switch(layout_type) {
     case 0:
-        gallery_contents_area[0] = size[0] * (1.0 - split_rate[layout_type]);
-        gallery_contents_area[1] = 0;
-        gallery_contents_area[2] = size[0];
-        gallery_contents_area[3] = size[1];
-        preview_area[0]          = 0;
-        preview_area[1]          = 0;
-        preview_area[2]          = gallery_contents_area[0];
-        preview_area[3]          = size[1];
+        gallery_contents_area.a.x = size[0] * (1.0 - split_rate[layout_type]);
+        gallery_contents_area.a.y = 0;
+        gallery_contents_area.b.x = size[0];
+        gallery_contents_area.b.y = size[1];
+        preview_area.a.x          = 0;
+        preview_area.a.y          = 0;
+        preview_area.b.x          = gallery_contents_area.a.x;
+        preview_area.b.y          = size[1];
         break;
     case 1:
-        gallery_contents_area[0] = 0;
-        gallery_contents_area[1] = 0;
-        gallery_contents_area[2] = size[0];
-        gallery_contents_area[3] = size[1] * split_rate[layout_type];
-        preview_area[0]          = 0;
-        preview_area[1]          = gallery_contents_area[3];
-        preview_area[2]          = size[0];
-        preview_area[3]          = size[1];
+        gallery_contents_area.a.x = 0;
+        gallery_contents_area.a.y = 0;
+        gallery_contents_area.b.x = size[0];
+        gallery_contents_area.b.y = size[1] * split_rate[layout_type];
+        preview_area.a.x          = 0;
+        preview_area.a.y          = gallery_contents_area.b.y;
+        preview_area.b.x          = size[0];
+        preview_area.b.y          = size[1];
         break;
     }
     return {gallery_contents_area, preview_area};
@@ -92,7 +92,7 @@ auto Browser::calc_visible_range(Tab& tab) -> std::array<int64_t, 2> {
         return {-1, -2};
     }
     const auto layout        = calc_layout();
-    const auto visible_num   = int64_t((layout[0][3] - layout[0][1]) / Layout::gallery_contents_height + 1);
+    const auto visible_num   = int64_t(layout[0].height() / Layout::gallery_contents_height + 1);
     const auto visible_head  = int64_t(selected_index - visible_num / 2);
     auto       visible_range = std::array{visible_head, visible_head + visible_num};
     if(!tab.valid_index(visible_range[0])) {
