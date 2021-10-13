@@ -162,20 +162,17 @@ auto Browser::refresh_callback() -> void {
         auto       area = gawl::Rectangle{{0, y}, {static_cast<double>(window_size[0]), y + Layout::gallery_contents_height}};
         gawl::draw_rect(this, {{area.a.x, area.a.y - 2}, {area.b.x, area.b.y + 2}}, {1, 1, 1, 1});
         gawl::draw_rect(this, area, Color::input_back);
-        const auto draw_func = [&](const size_t index, const gawl::Rectangle& char_area, gawl::internal::GraphicBase& chara) -> bool {
-            if(index < input_prompt.size()) {
-                input_font.set_char_color({0.8, 0.8, 0.8, 1.0});
-                chara.draw_rect(this, char_area);
-                return true;
-            } else if(index == (input_cursor + input_prompt.size())) {
-                chara.draw_rect(this, char_area);
+        const auto draw_func = [&](const size_t index, const gawl::Rectangle& char_area, gawl::internal::GraphicBase& /*chara*/) -> bool {
+            if(index == input_prompt.size()) {
+                input_font.set_char_color({1, 1, 1, 1});
+            }
+            if(index == (input_cursor + input_prompt.size())) {
                 gawl::draw_rect(this, {{char_area.a.x, area.a.y + 5}, {char_area.a.x + Layout::input_cursor_size[0], area.b.y - 5}}, {1, 1, 1, 1});
-                return true;
             }
             return false;
         };
         const auto text   = input_prompt + input_buffer.data();
-        const auto drawed = input_font.draw_fit_rect(this, area, {1, 1, 1, 1}, text.data(), gawl::Align::left, gawl::Align::center, draw_func);
+        const auto drawed = input_font.draw_fit_rect(this, area, {0.8, 0.8, 0.8, 1.0}, text.data(), gawl::Align::left, gawl::Align::center, draw_func);
         if(input_buffer.size() == static_cast<size_t>(input_cursor)) {
             gawl::draw_rect(this, {{drawed.b.x, area.a.y + 5}, {drawed.b.x + Layout::input_cursor_size[0], area.b.y - 5}}, {1, 1, 1, 1});
         }
