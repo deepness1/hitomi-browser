@@ -162,7 +162,7 @@ auto Browser::refresh_callback() -> void {
         auto       area = gawl::Rectangle{{0, y}, {static_cast<double>(window_size[0]), y + Layout::gallery_contents_height}};
         gawl::draw_rect(this, {{area.a.x, area.a.y - 2}, {area.b.x, area.b.y + 2}}, {1, 1, 1, 1});
         gawl::draw_rect(this, area, Color::input_back);
-        const auto draw_func = [&](const size_t index, const gawl::Rectangle& char_area, gawl::GraphicBase& chara) -> bool {
+        const auto draw_func = [&](const size_t index, const gawl::Rectangle& char_area, gawl::internal::GraphicBase& chara) -> bool {
             if(index < input_prompt.size()) {
                 input_font.set_char_color({0.8, 0.8, 0.8, 1.0});
                 chara.draw_rect(this, char_area);
