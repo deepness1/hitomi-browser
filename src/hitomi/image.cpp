@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <fstream>
 
 #include <fmt/format.h>
@@ -15,14 +16,9 @@ auto Image::get_thumbnail_url() const -> std::string {
     return url_thumbnail;
 }
 auto Image::download(const char* const path, bool webp) const -> bool {
-    webp         = !url_webp.empty() & webp;
-    auto referer = fmt::format("https://hitomi.la/reader/{}.html", id);
-    auto buffer  = download_binary(webp ? url_webp.data() : url.data(), nullptr, referer.data(), 60);
-    if(!buffer.has_value()) {
-        return false;
-    }
+    webp = !url_webp.empty() & webp;
 
-    std::string base, ext;
+    auto base = std::string(), ext = std::string();
     if(auto p = name.find("."); p != std::string::npos) {
         base = name.substr(0, p);
         ext  = webp ? ".webp" : name.substr(p);
@@ -34,7 +30,17 @@ auto Image::download(const char* const path, bool webp) const -> bool {
         ext  = "";
     }
     const auto filepath = std::string(path) + "/" + base + ext;
-    auto       file     = std::ofstream(filepath, std::ios::out | std::ios::binary);
+    if(std::filesystem::exists(filepath)) {
+        return true;
+    }
+
+    auto referer = fmt::format("https://hitomi.la/reader/{}.html", id);
+    auto buffer  = download_binary(webp ? url_webp.data() : url.data(), nullptr, referer.data(), 180);
+    if(!buffer.has_value()) {
+        return false;
+    }
+
+    auto file = std::ofstream(filepath, std::ios::out | std::ios::binary);
     file.write(reinterpret_cast<char*>(buffer.value().data()), buffer.value().size());
     return true;
 }

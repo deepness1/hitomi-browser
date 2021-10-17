@@ -97,7 +97,12 @@ int main(const int argc, const char* const argv[]) {
         w.download_info();
         printf("%s\n", w.get_display_name().data());
         const auto save_path = std::filesystem::path(args.save_dir) / build_save_dir(w);
-        w.start_download(save_path.c_str(), args.threads, args.webp);
+        while(true) {
+            if(w.start_download(save_path.c_str(), args.threads, args.webp)) {
+                break;
+            }
+            printf(">Retry\n");
+        }
     }
     return 0;
 }

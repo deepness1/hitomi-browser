@@ -142,7 +142,7 @@ auto Work::start_download(const char* const savedir, const uint64_t threads, con
     if(!has_info()) {
         return false;
     }
-    if(!std::filesystem::create_directories(savedir)) {
+    if(!std::filesystem::exists(savedir) && !std::filesystem::create_directories(savedir)) {
         return false;
     }
 
@@ -163,11 +163,11 @@ auto Work::start_download(const char* const savedir, const uint64_t threads, con
                         break;
                     }
                 }
-                const auto e = images[i].download(savedir, webp);
+                const auto r = images[i].download(savedir, webp);
                 if(callback && !callback(i)) {
                     break;
                 }
-                if(e) {
+                if(!r) {
                     error = true;
                 }
             }
