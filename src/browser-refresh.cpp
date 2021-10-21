@@ -188,7 +188,7 @@ auto Browser::refresh_callback() -> void {
         if(h < Layout::messsage_height_mininal) {
             h = Layout::messsage_height_mininal;
         }
-        auto area = gawl::Rectangle{{0, window_size[1] - h}, {1. * window_size[0], 1. * window_size[1]}};
+        const auto area = gawl::Rectangle{{0, window_size[1] - h}, {1. * window_size[0], 1. * window_size[1]}};
         gawl::draw_rect(this, area, Color::back);
         gawl::draw_rect(this, {{area.a.x, area.a.y}, {area.b.x, area.a.y + 3}}, Color::white);
         input_font.draw_fit_rect(this, area, Color::white, message.data.data());

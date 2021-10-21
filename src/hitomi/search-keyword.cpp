@@ -38,7 +38,7 @@ auto get_node_at_address(const uint64_t address, const uint64_t index_version) -
     return Node(buffer);
 }
 auto search_for_key(const std::vector<uint8_t>& key, const Node& node, uint64_t index_version) -> Range {
-    uint64_t index;
+    auto index = uint64_t();
     if(node.locate_key(key, index)) {
         return node.get_data(index);
     }
@@ -52,7 +52,7 @@ auto search_for_key(const std::vector<uint8_t>& key, const Node& node, uint64_t 
     const auto subnode = get_node_at_address(address, index_version);
     return search_for_key(key, subnode, index_version);
 }
-auto fetch_ids_with_range(Range range, uint64_t index_version) -> std::vector<GalleryID> {
+auto fetch_ids_with_range(const Range range, const uint64_t index_version) -> std::vector<GalleryID> {
     const auto url    = fmt::format("ltn.hitomi.la/galleriesindex/galleries.{}.data", index_version);
     const auto buffer = get_data_by_range(url.data(), range);
 
@@ -67,7 +67,7 @@ auto fetch_ids_with_range(Range range, uint64_t index_version) -> std::vector<Ga
         throw std::runtime_error("downloaded data length mismatched.");
     }
     auto ids = std::vector<GalleryID>();
-    for(size_t i = 0; i < number_of_galleryids; ++i) {
+    for(auto i = size_t(0); i < number_of_galleryids; i += 1) {
         ids.emplace_back(arr.read_32_endian());
     }
     return ids;

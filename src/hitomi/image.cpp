@@ -34,14 +34,14 @@ auto Image::download(const char* const path, bool webp) const -> bool {
         return true;
     }
 
-    auto referer = fmt::format("https://hitomi.la/reader/{}.html", id);
-    auto buffer  = download_binary(webp ? url_webp.data() : url.data(), nullptr, referer.data(), 180);
+    const auto referer = fmt::format("https://hitomi.la/reader/{}.html", id);
+    const auto buffer  = download_binary(webp ? url_webp.data() : url.data(), nullptr, referer.data(), 180);
     if(!buffer.has_value()) {
         return false;
     }
 
     auto file = std::ofstream(filepath, std::ios::out | std::ios::binary);
-    file.write(reinterpret_cast<char*>(buffer.value().data()), buffer.value().size());
+    file.write(reinterpret_cast<const char*>(buffer->data()), buffer->size());
     return true;
 }
 Image::Image(const GalleryID id, const nlohmann::json& info) : id(id) {
@@ -51,7 +51,7 @@ Image::Image(const GalleryID id, const nlohmann::json& info) : id(id) {
     const auto hash_a = hash.back();
     const auto hash_b = hash.substr(hash.size() - 3, 2);
 
-    int hash_num;
+    auto hash_num = int();
     try {
         hash_num = std::stoi(hash_b, nullptr, 16);
     } catch(const std::invalid_argument&) {

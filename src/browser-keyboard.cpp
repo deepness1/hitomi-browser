@@ -56,7 +56,7 @@ auto keycode_to_char(const uint32_t code, const bool shift) -> char {
         {KEY_SEMICOLON, {';', ':'}},
     };
     constexpr auto table_limit = sizeof(table) / sizeof(table[0]);
-    for(auto i = size_t(0); i < table_limit; ++i) {
+    for(auto i = size_t(0); i < table_limit; i += 1) {
         if(code == table[i].code) {
             return table[i].chara[shift];
         }
@@ -131,16 +131,16 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         case KEY_RIGHT:
             if((state != gawl::ButtonState::release) && ((key == KEY_LEFT && input_cursor > 0) || (key == KEY_RIGHT && static_cast<size_t>(input_cursor) < input_buffer.size()))) {
                 if(key == KEY_LEFT) {
-                    input_cursor--;
+                    input_cursor -= 1;
                 } else if(key == KEY_RIGHT) {
-                    input_cursor++;
+                    input_cursor += 1;
                 }
                 refresh();
             }
             return;
         case KEY_BACKSPACE:
             if(state != gawl::ButtonState::release && input_cursor > 0) {
-                input_cursor--;
+                input_cursor -= 1;
                 input_buffer.erase(input_cursor, 1);
                 refresh();
             }
@@ -152,20 +152,22 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
             }
             return;
         default:
-            if(state == gawl::ButtonState::release) return;
+            if(state == gawl::ButtonState::release) {
+                return;
+            }
             input_buffer.insert(input_cursor, {keycode_to_char(key, shift)});
-            input_cursor++;
+            input_cursor += 1;
             refresh();
             return;
         }
     }
 
-    const static auto ADJUST_TRIGGER_KEYS = std::array{NEXT_WORK, PREV_WORK, NEXT_TAB, PREV_TAB, REMOVE_WORK};
+    constexpr auto ADJUST_TRIGGER_KEYS = std::array{NEXT_WORK, PREV_WORK, NEXT_TAB, PREV_TAB, REMOVE_WORK};
 
     auto do_refresh = false;
     if(state == gawl::ButtonState::press) {
         if(auto p = std::find(ADJUST_TRIGGER_KEYS.begin(), ADJUST_TRIGGER_KEYS.end(), key); p != ADJUST_TRIGGER_KEYS.end()) {
-            key_press_count++;
+            key_press_count += 1;
         }
     }
     switch(key) {
@@ -218,9 +220,9 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
                 if(current != nullptr && tabs.data.valid_index(swap_with)) {
                     std::swap(*current, *tabs.data[swap_with]);
                     if(key == NEXT_TAB) {
-                        tabs.data++;
+                        tabs.data += 1;
                     } else {
-                        tabs.data--;
+                        tabs.data -= 1;
                     }
                     do_refresh = true;
                 }
@@ -574,7 +576,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
     }
     if(key_press_count > 0 && (!do_refresh || state == gawl::ButtonState::release)) {
         if(const auto p = std::find(ADJUST_TRIGGER_KEYS.begin(), ADJUST_TRIGGER_KEYS.end(), key); p != ADJUST_TRIGGER_KEYS.end()) {
-            key_press_count--;
+            key_press_count -= 1;
             if(key_press_count == 0) {
                 adjust_cache();
                 refresh();

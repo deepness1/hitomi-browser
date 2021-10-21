@@ -47,7 +47,7 @@ auto Tab::set_retrieve(std::vector<hitomi::GalleryID>&& ids) -> void {
         return;
     }
     auto new_index = uint64_t(-1);
-    for(uint64_t i = 0; i < data.size() * 2; i += 1) {
+    for(auto i = uint64_t(0); i < data.size() * 2; i += 1) {
         const auto search_index = int64_t(index + (i == 0 ? 0 : i % 2 == 1 ? i / 2 + 1
                                                                            : -i / 2));
         if(!valid_index(search_index)) {

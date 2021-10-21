@@ -27,7 +27,7 @@ auto parse_args(const int argc, const char* const argv[]) -> ArgParseResult {
     };
 
     auto longindex = int(0);
-    auto c = int();
+    auto c         = int();
     while((c = getopt_long(argc, const_cast<char* const*>(argv), optstring, longopts, &longindex)) != -1) {
         switch(c) {
         case 'h':
@@ -47,7 +47,7 @@ auto parse_args(const int argc, const char* const argv[]) -> ArgParseResult {
 
     while(optind < argc) {
         result.ids.emplace_back(std::stoul(argv[optind]));
-        optind++;
+        optind += 1;
     }
 
     result.help = help != 0;

@@ -1,6 +1,5 @@
 #pragma once
 #include "json.hpp"
-
 #include "type.hpp"
 
 namespace hitomi {

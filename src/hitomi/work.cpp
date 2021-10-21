@@ -7,8 +7,8 @@
 #include "work.hpp"
 
 namespace {
-constexpr auto work_info_url     = "ltn.hitomi.la/galleries/{}.js";
-constexpr auto gallery_block_url = "ltn.hitomi.la/galleryblock/{}.html";
+constexpr auto WORK_INFO_URL     = "ltn.hitomi.la/galleries/{}.js";
+constexpr auto GALLERY_BLOCK_URL = "ltn.hitomi.la/galleryblock/{}.html";
 } // namespace
 
 namespace hitomi {
@@ -70,7 +70,7 @@ auto Work::download_info() -> bool {
     if(!has_id()) {
         return false;
     }
-    auto url    = fmt::format(work_info_url, id);
+    auto url    = fmt::format(WORK_INFO_URL, id);
     auto buffer = download_binary(url.data());
     if(!buffer.has_value()) {
         return false;
@@ -110,13 +110,13 @@ auto Work::download_info() -> bool {
         }
     }
 
-    url    = fmt::format(gallery_block_url, id);
+    url    = fmt::format(GALLERY_BLOCK_URL, id);
     buffer = download_binary(url.data());
     if(!buffer) {
         return false;
     }
 
-    auto parse_comma_list = [&buffer](const std::string& key) -> std::vector<std::string> {
+    const auto parse_comma_list = [&buffer](const std::string& key) -> std::vector<std::string> {
         const auto& arr    = buffer.value();
         auto        result = std::vector<std::string>();
         auto        pos    = arr.begin();
@@ -150,15 +150,15 @@ auto Work::start_download(const char* const savedir, const uint64_t threads, con
     auto index_lock = std::mutex();
     auto workers    = std::vector<std::thread>(threads);
     auto error      = false;
-    for(size_t t = 0; t < threads; ++t) {
+    for(auto t = size_t(0); t < threads; t += 1) {
         workers[t] = std::thread([&]() {
-            while(1) {
-                uint64_t i;
+            while(true) {
+                auto i = uint64_t();
                 {
-                    std::lock_guard<std::mutex> lock(index_lock);
+                    const auto lock = std::lock_guard<std::mutex>(index_lock);
                     if(index < images.size()) {
                         i = index;
-                        index++;
+                        index += 1;
                     } else {
                         break;
                     }

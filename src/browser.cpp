@@ -30,7 +30,7 @@ auto Browser::adjust_cache() -> void {
         const auto lock = tabs.get_lock();
         for(auto& t : tabs.data) {
             const auto range = calc_visible_range(t);
-            for(auto i = range[0]; i <= range[1]; ++i) {
+            for(auto i = range[0]; i <= range[1]; i += 1) {
                 visible.emplace_back(*t[i]);
             }
         }
@@ -144,8 +144,7 @@ auto Browser::show_message(const char* ptr) -> void {
     }
     message.data  = ptr;
     message_timer = std::thread([this]() {
-        const auto comp = !message_event.wait_for(std::chrono::seconds(1));
-        if(comp) {
+        if(!message_event.wait_for(std::chrono::seconds(1))) {
             const auto lock = message.get_lock();
             message.data.clear();
             refresh();
@@ -208,7 +207,7 @@ auto Browser::cancel_download(const hitomi::GalleryID id) -> void {
     if(auto p = std::find(download_queue.data.begin(), download_queue.data.end(), id); p != download_queue.data.end()) {
         download_queue.data.erase(p);
     } else {
-        // maybe downloading.
+        // maybe downloading
         download_cancel_id.store(id);
     }
 }
@@ -225,7 +224,7 @@ auto Browser::run_command(const char* const command) -> void {
     }
     const auto arg          = std::string(command);
     external_command_thread = std::thread([this, arg]() {
-        auto result = system(arg.data());
+        const auto result = system(arg.data());
         if(result != 0) {
             show_message("system() failed.");
             refresh();
@@ -245,7 +244,7 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app, {.title 
 
     // load savedata
     if(auto file = std::ifstream(SAVEDATA_PATH, std::ios::in | std::ios::binary); file) {
-        SaveData save;
+        auto save = SaveData();
         file.read(reinterpret_cast<char*>(&save), sizeof(save));
         layout_type   = save.layout_type;
         split_rate[0] = save.split_rate[0];
@@ -255,7 +254,7 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app, {.title 
 
     // start subthreads
     finish_subthreads = false;
-    for(size_t t = 0; t < CACHE_DOWNLOAD_THREADS; ++t) {
+    for(auto t = size_t(0); t < CACHE_DOWNLOAD_THREADS; t += 1) {
         cache_download_threads[t] = std::thread([this]() {
             while(!finish_subthreads) {
                 auto queue_found = false;
@@ -274,7 +273,7 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app, {.title 
                         const auto lock = tabs.get_lock();
                         for(auto& tab : tabs.data) {
                             const auto range = calc_visible_range(tab);
-                            for(auto i = range[0]; i <= range[1]; ++i) {
+                            for(auto i = range[0]; i <= range[1]; i += 1) {
                                 if(*tab[i] == id) {
                                     return true;
                                 } else if(*tab[i] < id) {
@@ -342,7 +341,7 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app, {.title 
                 if(auto workname = savedir + " " + replace_illeggal_chara(w.get_display_name()); workname.size() < 256) {
                     savedir = std::move(workname);
                 }
-                auto savepath = temporary_directory + "/" + savedir;
+                const auto savepath = temporary_directory + "/" + savedir;
                 {
                     const auto lock = download_progress.get_lock();
 
@@ -385,9 +384,9 @@ Browser::~Browser() {
     download_event.wakeup();
 
     // while waiting for subthreads, dump tabs.
-    SaveData      save{layout_type, {split_rate[0], split_rate[1]}};
-    std::ofstream file(SAVEDATA_PATH, std::ios::out | std::ios::binary);
-    file.write(reinterpret_cast<char*>(&save), sizeof(SaveData));
+    const auto save = SaveData{layout_type, {split_rate[0], split_rate[1]}};
+    auto       file = std::ofstream(SAVEDATA_PATH, std::ios::out | std::ios::binary);
+    file.write(reinterpret_cast<const char*>(&save), sizeof(SaveData));
     {
         const auto lock = tabs.get_lock();
         tabs.data.dump(file);
@@ -399,7 +398,7 @@ Browser::~Browser() {
         message_event.wakeup();
         message_timer.join();
     }
-    for(auto t = size_t(0); t < CACHE_DOWNLOAD_THREADS; ++t) {
+    for(auto t = size_t(0); t < CACHE_DOWNLOAD_THREADS; t += 1) {
         cache_download_threads[t].join();
     }
     if(search_thread.joinable()) {

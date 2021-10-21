@@ -18,11 +18,7 @@ auto write_callback(const void* const p, const size_t s, const size_t n, void* c
 }
 struct CurlHandle {
     CURL* curl;
-    //    curl_slist* chunk = nullptr;
 
-    //    operator curl_slist*() {
-    //        return chunk;
-    //    }
     operator CURL*() {
         return curl;
     }
@@ -31,9 +27,6 @@ struct CurlHandle {
     }
     ~CurlHandle() {
         curl_easy_cleanup(curl);
-        //        if(chunk != nullptr) {
-        //            curl_slist_free_all(chunk);
-        //        }
     }
 };
 auto encode_url(std::string const& url) -> std::string {
@@ -87,7 +80,7 @@ auto download_binary(const char* const url, const char* const range, const char*
     if(res != CURLE_OK) {
         return std::nullopt;
     }
-    long http_code;
+    auto http_code = long();
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
     if((http_code != 200 && http_code != 206) || res == CURLE_ABORTED_BY_CALLBACK) {
         return std::nullopt;

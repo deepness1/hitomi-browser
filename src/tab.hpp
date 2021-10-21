@@ -47,7 +47,7 @@ class IndexData {
         }
         if(index == i) {
             if(index >= static_cast<int64_t>(data.size() - 1)) {
-                index--;
+                index -= 1;
             } else if(data.size() - 1 == 0) {
                 index = -1;
             }

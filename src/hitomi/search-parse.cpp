@@ -1,3 +1,5 @@
+#include <array>
+
 #include "search-parse.hpp"
 
 namespace {
@@ -18,34 +20,34 @@ struct Arg {
     const char  chara;
     const char* help;
 };
-const Arg ARGS[] = {
-    {Option::artist, 'a', "Specify artist."},
-    {Option::group, 'g', "Specify group."},
-    {Option::series, 's', "Specify series."},
-    {Option::character, 'c', "Specify character."},
-    {Option::type, 'w', "Specify type.{doujinshi, artistcg, gamecg, manga}"},
-    {Option::tag, 't', "Specify tags."},
-    {Option::language, 'l', "Specify language."},
-    {Option::keyword, 'k', "Specify keywords."},
-    {Option::help, 'h', "Show this help."},
-    {Option::quiet, 'q', "Print nothing."},
+const auto ARGS = std::array{
+    Arg{Option::artist, 'a', "Specify artist."},
+    Arg{Option::group, 'g', "Specify group."},
+    Arg{Option::series, 's', "Specify series."},
+    Arg{Option::character, 'c', "Specify character."},
+    Arg{Option::type, 'w', "Specify type.{doujinshi, artistcg, gamecg, manga}"},
+    Arg{Option::tag, 't', "Specify tags."},
+    Arg{Option::language, 'l', "Specify language."},
+    Arg{Option::keyword, 'k', "Specify keywords."},
+    Arg{Option::help, 'h', "Show this help."},
+    Arg{Option::quiet, 'q', "Print nothing."},
 };
-const auto ARGS_LIMIT = sizeof(ARGS) / sizeof(ARGS[0]);
 const Arg& HELP  = ARGS[8];
 const Arg& QUIET = ARGS[9];
 } // namespace
 namespace hitomi {
 namespace {
 auto print_help(std::string& out) -> void {
-    for(size_t i = 0; i < ARGS_LIMIT; i += 1) {
+    for(size_t i = 0; i < ARGS.size(); i += 1) {
         out = out + "    -" + ARGS[i].chara + " " + ARGS[i].help + "\n";
     }
-    out += "The following characters can be added as a prefix for each word:\n"
-        "    '~' NOT\n"
-        "    '|' OR\n"
-        "    '&' AND\n";
+    out += R"help(The following characters can be added as a prefix for each word:
+    '~' NOT
+    '|' OR
+    '&' AND
+)help";
 };
-}
+} // namespace
 auto parse_args(const std::vector<std::string>& args) -> ParseResult {
     auto       result      = ParseResult();
     auto       current     = &result.keyword;

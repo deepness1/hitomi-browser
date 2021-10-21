@@ -5,9 +5,9 @@
 #include "tab.hpp"
 #include "type.hpp"
 
-constexpr size_t      CACHE_DOWNLOAD_THREADS = 16;
-constexpr size_t      IMAGE_DOWNLOAD_THREADS = 16;
-constexpr const char* SAVEDATA_PATH          = "/home/mojyack/.cache/hitomi-browser.dat";
+constexpr auto CACHE_DOWNLOAD_THREADS = 16;
+constexpr auto IMAGE_DOWNLOAD_THREADS = 16;
+constexpr auto SAVEDATA_PATH          = "/home/mojyack/.cache/hitomi-browser.dat";
 class Browser : public gawl::WaylandWindow {
   private:
     using Cache = std::map<hitomi::GalleryID, std::shared_ptr<WorkWithThumbnail>>;

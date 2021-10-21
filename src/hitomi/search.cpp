@@ -9,10 +9,12 @@
 namespace hitomi {
 namespace {
 auto categorize_words(const std::vector<std::string>& words) -> std::array<std::vector<std::string>, 3> {
-    std::vector<std::string> and_words, or_words, not_words;
+    auto and_words = std::vector<std::string>();
+    auto or_words  = std::vector<std::string>();
+    auto not_words = std::vector<std::string>();
     for(auto& w : words) {
-        std::string::const_iterator src;
-        std::vector<std::string>*   dest;
+        auto src  = std::string::const_iterator();
+        auto dest = (std::vector<std::string>*)(nullptr);
         if(w[0] == '~') {
             src  = w.begin() + 1;
             dest = &not_words;
@@ -37,7 +39,7 @@ auto categorize_words(const std::vector<std::string>& words) -> std::array<std::
         return lists[0];                                                                                \
     }                                                                                                   \
     auto result = lists[0];                                                                             \
-    for(auto l = lists.begin() + 1; l != lists.end(); ++l) {                                            \
+    for(auto l = lists.begin() + 1; l != lists.end(); l += 1) {                                         \
         auto res = std::vector<GalleryID>();                                                            \
         std::func(result.begin(), result.end(), l->begin(), l->end(), std::inserter(res, res.begin())); \
         result = res;                                                                                   \
@@ -53,12 +55,12 @@ auto filter_or(const std::vector<std::vector<GalleryID>>& lists) -> std::vector<
 auto filter_not(const std::vector<std::vector<GalleryID>>& lists) -> std::vector<GalleryID> {
     FILTER(set_difference);
 }
-auto split(const char* str) -> std::vector<std::string> {
+auto split(const char* const str) -> std::vector<std::string> {
     auto       result = std::vector<std::string>();
     const auto len    = std::strlen(str);
-    bool       qot    = false;
-    size_t     arglen;
-    for(size_t i = 0; i < len; i += 1) {
+    auto       qot    = false;
+    auto       arglen = size_t();
+    for(auto i = size_t(0); i < len; i += 1) {
         auto start = i;
         if(str[i] == '\"') {
             qot = true;
@@ -73,7 +75,7 @@ auto split(const char* str) -> std::vector<std::string> {
                 qot = false;
             }
             arglen = i - start;
-            //i += 1;
+            // i += 1;
         } else {
             while(i < len && str[i] != ' ') {
                 i++;
@@ -82,9 +84,9 @@ auto split(const char* str) -> std::vector<std::string> {
         }
         result.emplace_back(str + start, str + start + arglen);
     }
-    //if(qot) {
-    //    printf("One of the quotes is open\n");
-    //}
+    // if(qot) {
+    //     printf("One of the quotes is open\n");
+    // }
     return result;
 }
 } // namespace
@@ -97,9 +99,11 @@ auto search(const std::vector<std::string>& args, std::string* output, std::func
 #define FETCH(ARG, FETCH_FUNC)                     \
     if(!ARG.empty()) {                             \
         auto category = categorize_words(ARG);     \
-        for(int i = 0; i < 3; ++i) {               \
+        for(auto i = int(0); i < 3; i += 1) {      \
             auto const& c = category[i];           \
-            if(c.empty()) continue;                \
+            if(c.empty()) {                        \
+                continue;                          \
+            }                                      \
             for(auto const& w : c) {               \
                 lists[i].emplace_back(FETCH_FUNC); \
             }                                      \
