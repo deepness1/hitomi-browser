@@ -61,7 +61,7 @@ Image::Image(const GalleryID id, const nlohmann::json& info) : id(id) {
     const auto number_of_frontends = hash_num < 0x7a ? 1 : 0;
 
     const auto haswebp  = info.contains("haswebp") && (info["haswebp"].get<int>() == 1);
-    const auto sep      = name.find(".");
+    const auto sep      = name.rfind(".");
     const auto filebase = name.substr(0, sep);
     const auto fileext  = name.substr(sep);
 
