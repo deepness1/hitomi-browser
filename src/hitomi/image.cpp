@@ -37,6 +37,7 @@ auto Image::download(const char* const path, bool webp) const -> bool {
     const auto referer = fmt::format("https://hitomi.la/reader/{}.html", id);
     const auto buffer  = download_binary(webp ? url_webp.data() : url.data(), nullptr, referer.data(), 180);
     if(!buffer.has_value()) {
+        fprintf(stderr, ">failed to download %s from %s\n", base.data(), url.data());
         return false;
     }
 
@@ -57,8 +58,7 @@ Image::Image(const GalleryID id, const nlohmann::json& info) : id(id) {
     } catch(const std::invalid_argument&) {
         throw std::runtime_error("invalid hash");
     }
-    const int number_of_frontends = hash_num < 0x44 ? 2 : hash_num < 0x88 ? 1
-                                                                          : 0;
+    const auto number_of_frontends = hash_num < 0x7a ? 1 : 0;
 
     const auto haswebp  = info.contains("haswebp") && (info["haswebp"].get<int>() == 1);
     const auto sep      = name.find(".");
