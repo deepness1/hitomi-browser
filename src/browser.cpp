@@ -188,18 +188,18 @@ auto Browser::search(const std::string arg) -> void {
         refresh();
     });
 }
-auto Browser::download(const hitomi::GalleryID id) -> void {
+auto Browser::download(const DownloadParameter& parameter) -> void {
     const auto lock = download_queue.get_lock();
     {
         const auto lock = download_progress.get_lock();
-        if(download_progress.data.contains(id)) {
+        if(download_progress.data.contains(parameter.id)) {
             return;
         }
     }
-    if(std::find(download_queue.data.begin(), download_queue.data.end(), id) != download_queue.data.end()) {
+    if(std::find_if(download_queue.data.begin(), download_queue.data.end(), [&parameter](const DownloadParameter& p) { return p.id == parameter.id; }) != download_queue.data.end()) {
         return;
     };
-    download_queue.data.emplace_back(id);
+    download_queue.data.emplace_back(parameter);
     download_event.wakeup();
 }
 auto Browser::cancel_download(const hitomi::GalleryID id) -> void {
@@ -315,7 +315,7 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app, {.title 
     download_thread = std::thread([this]() {
         while(!finish_subthreads) {
             auto do_download = false;
-            auto next        = hitomi::GalleryID();
+            auto next        = DownloadParameter();
             {
                 const auto lock = download_queue.get_lock();
                 if(!download_queue.data.empty()) {
@@ -328,16 +328,16 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app, {.title 
                 auto w = hitomi::Work();
                 {
                     const auto lock = cache.get_lock();
-                    if(cache.data.contains(next) && cache.data[next]) {
-                        w = cache.data[next]->work;
+                    if(cache.data.contains(next.id) && cache.data[next.id]) {
+                        w = cache.data[next.id]->work;
                     }
                 }
 
                 if(!w.has_info()) {
-                    w = hitomi::Work(next);
+                    w = hitomi::Work(next.id);
                     w.download_info();
                 }
-                auto savedir = std::to_string(next);
+                auto savedir = std::to_string(next.id);
                 if(auto workname = savedir + " " + replace_illeggal_chara(w.get_display_name()); workname.size() < 256) {
                     savedir = std::move(workname);
                 }
@@ -345,23 +345,24 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app, {.title 
                 {
                     const auto lock = download_progress.get_lock();
 
-                    download_progress.data[next].first = savepath;
-                    download_progress.data[next].second.resize(w.get_pages());
+                    download_progress.data[next.id].first = savepath;
+                    download_progress.data[next.id].second.resize(w.get_pages());
                 }
                 download_cancel_id.store(-1);
-                w.start_download(savepath.data(), IMAGE_DOWNLOAD_THREADS, true, [this, next](uint64_t page) -> bool {
-                    auto canceled = bool();
-                    {
-                        const auto lock = download_cancel_id.get_lock();
-                        canceled        = next == download_cancel_id.data;
-                        if(!canceled) {
-                            std::lock_guard<std::mutex> lock(download_progress.mutex);
-                            download_progress.data[next].second[page] = true;
-                        }
-                    }
-                    refresh();
-                    return !canceled && !finish_subthreads;
-                });
+                w.download({savepath.data(), IMAGE_DOWNLOAD_THREADS, true, [this, next](uint64_t page) -> bool {
+                                auto canceled = bool();
+                                {
+                                    const auto lock = download_cancel_id.get_lock();
+                                    canceled        = next.id == download_cancel_id.data;
+                                    if(!canceled) {
+                                        std::lock_guard<std::mutex> lock(download_progress.mutex);
+                                        download_progress.data[next.id].second[page] = true;
+                                    }
+                                }
+                                refresh();
+                                return !canceled && !finish_subthreads;
+                            },
+                            next.range});
                 refresh();
             } else {
                 download_event.wait();

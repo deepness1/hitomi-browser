@@ -439,9 +439,10 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         break;
     case DOWNLOAD:
         if(state == gawl::ButtonState::press) {
-            auto do_open     = false;
-            auto do_download = false;
-            auto target_id   = hitomi::GalleryID();
+            auto do_open        = false;
+            auto do_download    = false;
+            auto download_range = std::pair<uint64_t, uint64_t>();
+            auto target_id      = hitomi::GalleryID();
             {
                 const auto lock = tabs.get_lock();
                 const auto p    = tabs.data.current();
@@ -470,9 +471,27 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
                             break;
                         }
                     }
-                    reading->append(w);
-                    do_download = true;
-                    target_id   = w;
+                    if(input_result || !shift) {
+                        if(input_result) try {
+                            const auto sep = input_buffer.find(':');
+                            if(sep != std::string::npos) {
+                                download_range.first = std::stoull(input_buffer.substr(0, sep));
+                                download_range.second = std::stoull(input_buffer.substr(sep + 1));
+                            }  else {
+                                download_range.first = 0;
+                                download_range.second = std::stoull(input_buffer);
+                            }
+                        } catch(const std::runtime_error&) {
+                                show_message("invalid page range");
+                                break;
+                        }
+                        reading->append(w);
+                        do_download = true;
+                        target_id   = w;
+                    } else {
+                        input(key, "range: ");
+                        break;
+                    }
                 } else {
                     if(auto w = p->current(); w != nullptr) {
                         do_open   = true;

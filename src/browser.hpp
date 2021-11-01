@@ -31,6 +31,11 @@ class Browser : public gawl::WaylandWindow {
     int64_t layout_type   = 0;
     double  split_rate[2] = {Layout::default_contents_rate, Layout::default_contents_rate};
 
+    struct DownloadParameter {
+        hitomi::GalleryID                            id;
+        std::optional<std::pair<uint64_t, uint64_t>> range;
+    };
+
     bool                                           finish_subthreads;
     gawl::Critical<Cache>                          cache;
     gawl::Critical<std::vector<hitomi::GalleryID>> cache_queue;
@@ -41,7 +46,7 @@ class Browser : public gawl::WaylandWindow {
     std::thread                                    message_timer;
     gawl::Critical<std::string>                    message;
     std::thread                                    download_thread;
-    gawl::Critical<std::vector<hitomi::GalleryID>> download_queue;
+    gawl::Critical<std::vector<DownloadParameter>> download_queue;
     gawl::Event                                    download_event;
     gawl::Critical<hitomi::GalleryID>              download_cancel_id = -1;
     std::thread                                    external_command_thread;
@@ -58,7 +63,7 @@ class Browser : public gawl::WaylandWindow {
     auto show_message(const char* message) -> void;
     auto input(uint32_t key, const char* prompt, const char* const init = nullptr) -> void;
     auto search(std::string arg) -> void;
-    auto download(hitomi::GalleryID id) -> void;
+    auto download(const DownloadParameter& parameter) -> void;
     auto cancel_download(hitomi::GalleryID id) -> void;
     auto delete_downloaded(hitomi::GalleryID id) -> void;
     auto run_command(const char* command) -> void;
