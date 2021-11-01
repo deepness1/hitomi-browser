@@ -138,33 +138,39 @@ auto Work::download_info() -> bool {
     series  = parse_comma_list("/series/");
     return true;
 }
-auto Work::start_download(const char* const savedir, const uint64_t threads, const bool webp, const std::function<bool(uint64_t)> callback) -> bool {
+auto Work::download(const DownloadParameters& parameters) -> const char* {
     if(!has_info()) {
-        return false;
+        return "information not downloaded";
     }
-    if(!std::filesystem::exists(savedir) && !std::filesystem::create_directories(savedir)) {
-        return false;
+    if(!std::filesystem::exists(parameters.savedir) && !std::filesystem::create_directories(parameters.savedir)) {
+        return "failed to create save directory";
     }
 
-    auto index      = size_t(0);
+    const auto page_begin = parameters.page_range.has_value() ? parameters.page_range->first : 0;
+    const auto page_end   = parameters.page_range.has_value() ? parameters.page_range->second : images.size();
+    if(page_begin >= page_end || page_end > images.size()) {
+        return "invalid page range";
+    }
+
+    auto index      = page_begin;
     auto index_lock = std::mutex();
-    auto workers    = std::vector<std::thread>(threads);
+    auto workers    = std::vector<std::thread>(parameters.threads);
     auto error      = false;
-    for(auto t = size_t(0); t < threads; t += 1) {
-        workers[t] = std::thread([&]() {
+    for(auto& w : workers) {
+        w = std::thread([&]() {
             while(true) {
                 auto i = uint64_t();
                 {
                     const auto lock = std::lock_guard<std::mutex>(index_lock);
-                    if(index < images.size()) {
+                    if(index < page_end) {
                         i = index;
                         index += 1;
                     } else {
                         break;
                     }
                 }
-                const auto r = images[i].download(savedir, webp);
-                if(callback && !callback(i)) {
+                const auto r = images[i].download(parameters.savedir, parameters.webp);
+                if(parameters.callback && !parameters.callback(i)) {
                     break;
                 }
                 if(!r) {
@@ -173,12 +179,11 @@ auto Work::start_download(const char* const savedir, const uint64_t threads, con
             }
         });
     }
-    for(auto& t : workers) {
-        t.join();
+    for(auto& w : workers) {
+        w.join();
     }
-    return !error;
+    return error ? "unknown error" : nullptr;
 }
 Work::Work(const GalleryID id) : id(id){};
 Work::Work() : id(-1){};
-Work::~Work(){};
 } // namespace hitomi

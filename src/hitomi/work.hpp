@@ -36,9 +36,17 @@ class Work {
     auto has_id() const -> bool;
     auto has_info() const -> bool;
     auto download_info() -> bool;
-    auto start_download(const char* savedir, uint64_t threads, bool webp, std::function<bool(uint64_t)> callback = nullptr) -> bool;
+
+    struct DownloadParameters {
+        const char*                                  savedir;
+        uint64_t                                     threads;
+        bool                                         webp     = false;
+        std::function<bool(uint64_t)>                callback = nullptr;
+        std::optional<std::pair<uint64_t, uint64_t>> page_range;
+    };
+    auto download(const DownloadParameters& parameters) -> const char*;
     Work(GalleryID id);
     Work();
-    ~Work();
+    ~Work() {};
 };
 } // namespace hitomi
