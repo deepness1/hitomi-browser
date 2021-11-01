@@ -98,10 +98,11 @@ int main(const int argc, const char* const argv[]) {
         printf("%s\n", w.get_display_name().data());
         const auto save_path = std::filesystem::path(args.save_dir) / build_save_dir(w);
         while(true) {
-            if(w.start_download(save_path.c_str(), args.threads, args.webp)) {
+            const auto r = w.download({save_path.c_str(), args.threads, args.webp});
+            if(r == nullptr) {
                 break;
             }
-            printf(">Retry\n");
+            printf(">Error: %s\n>Retry\n", r);
         }
     }
     return 0;

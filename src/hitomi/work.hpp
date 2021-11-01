@@ -40,13 +40,13 @@ class Work {
     struct DownloadParameters {
         const char*                                  savedir;
         uint64_t                                     threads;
-        bool                                         webp     = false;
-        std::function<bool(uint64_t)>                callback = nullptr;
-        std::optional<std::pair<uint64_t, uint64_t>> page_range;
+        bool                                         webp       = false;
+        std::function<bool(uint64_t)>                callback   = nullptr;
+        std::optional<std::pair<uint64_t, uint64_t>> page_range = std::nullopt;
     };
     auto download(const DownloadParameters& parameters) -> const char*;
     Work(GalleryID id);
     Work();
-    ~Work() {};
+    ~Work(){};
 };
 } // namespace hitomi

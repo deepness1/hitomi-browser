@@ -204,7 +204,7 @@ auto Browser::download(const DownloadParameter& parameter) -> void {
 }
 auto Browser::cancel_download(const hitomi::GalleryID id) -> void {
     const auto lock = download_queue.get_lock();
-    if(auto p = std::find(download_queue.data.begin(), download_queue.data.end(), id); p != download_queue.data.end()) {
+    if(auto p = std::find_if(download_queue.data.begin(), download_queue.data.end(), [id](const DownloadParameter& p) { return p.id == id; }); p != download_queue.data.end()) {
         download_queue.data.erase(p);
     } else {
         // maybe downloading
@@ -346,24 +346,28 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow(app, {.title 
                     const auto lock = download_progress.get_lock();
 
                     download_progress.data[next.id].first = savepath;
-                    download_progress.data[next.id].second.resize(w.get_pages());
+                    download_progress.data[next.id].second.resize(next.range.has_value() ? next.range->second - next.range->first : w.get_pages());
                 }
                 download_cancel_id.store(-1);
-                w.download({savepath.data(), IMAGE_DOWNLOAD_THREADS, true, [this, next](uint64_t page) -> bool {
-                                auto canceled = bool();
-                                {
-                                    const auto lock = download_cancel_id.get_lock();
-                                    canceled        = next.id == download_cancel_id.data;
-                                    if(!canceled) {
-                                        std::lock_guard<std::mutex> lock(download_progress.mutex);
-                                        download_progress.data[next.id].second[page] = true;
-                                    }
-                                }
-                                refresh();
-                                return !canceled && !finish_subthreads;
-                            },
-                            next.range});
-                refresh();
+                const auto r = w.download({savepath.data(), IMAGE_DOWNLOAD_THREADS, true, [this, next](uint64_t page) -> bool {
+                                               auto canceled = bool();
+                                               {
+                                                   const auto lock = download_cancel_id.get_lock();
+                                                   canceled        = next.id == download_cancel_id.data;
+                                                   if(!canceled) {
+                                                       std::lock_guard<std::mutex> lock(download_progress.mutex);
+                                                       download_progress.data[next.id].second[page - (next.range.has_value() ? next.range->first : 0)] = true;
+                                                   }
+                                               }
+                                               refresh();
+                                               return !canceled && !finish_subthreads;
+                                           },
+                                           next.range});
+                if(r != nullptr) {
+                    show_message(r);
+                } else {
+                    refresh();
+                }
             } else {
                 download_event.wait();
             }

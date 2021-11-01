@@ -33,7 +33,7 @@ class Browser : public gawl::WaylandWindow {
 
     struct DownloadParameter {
         hitomi::GalleryID                            id;
-        std::optional<std::pair<uint64_t, uint64_t>> range;
+        std::optional<std::pair<uint64_t, uint64_t>> range = std::nullopt;
     };
 
     bool                                           finish_subthreads;

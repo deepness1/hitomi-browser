@@ -366,7 +366,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
                 last_sent_tab = input_buffer;
                 message       = "sent to " + last_sent_tab;
                 if(do_download) {
-                    download(download_id);
+                    download({download_id});
                     show_message("download start.");
                 }
             } else {
@@ -439,10 +439,13 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         break;
     case DOWNLOAD:
         if(state == gawl::ButtonState::press) {
-            auto do_open        = false;
-            auto do_download    = false;
-            auto download_range = std::pair<uint64_t, uint64_t>();
-            auto target_id      = hitomi::GalleryID();
+            enum class Action {
+                open,
+                download,
+                input,
+            };
+            auto action    = Action();
+            auto target_id = DownloadParameter();
             {
                 const auto lock = tabs.get_lock();
                 const auto p    = tabs.data.current();
@@ -472,42 +475,46 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
                         }
                     }
                     if(input_result || !shift) {
-                        if(input_result) try {
-                            const auto sep = input_buffer.find(':');
-                            if(sep != std::string::npos) {
-                                download_range.first = std::stoull(input_buffer.substr(0, sep));
-                                download_range.second = std::stoull(input_buffer.substr(sep + 1));
-                            }  else {
-                                download_range.first = 0;
-                                download_range.second = std::stoull(input_buffer);
-                            }
-                        } catch(const std::runtime_error&) {
-                                show_message("invalid page range");
+                        if(input_result) {
+                            try {
+                                const auto sep = input_buffer.find(':');
+                                if(sep != std::string::npos) {
+                                    target_id.range.emplace(std::stoull(input_buffer.substr(0, sep)), std::stoull(input_buffer.substr(sep + 1)));
+                                } else {
+                                    target_id.range.emplace(0, std::stoull(input_buffer));
+                                }
+                                if(target_id.range->first >= target_id.range->second) {
+                                    throw std::range_error("invalid page range");
+                                }
+                            } catch(const std::runtime_error& e) {
+                                show_message(e.what());
+                                do_refresh = true;
                                 break;
+                            }
                         }
                         reading->append(w);
-                        do_download = true;
-                        target_id   = w;
+                        action       = Action::download;
+                        target_id.id = w;
                     } else {
-                        input(key, "range: ");
-                        break;
+                        action = Action::input;
                     }
                 } else {
                     if(auto w = p->current(); w != nullptr) {
-                        do_open   = true;
-                        target_id = *w;
+                        action       = Action::open;
+                        target_id.id = *w;
                     }
                 }
             }
-            if(do_download) {
+            switch(action) {
+            case Action::download:
                 download(target_id);
                 show_message("download start.");
                 do_refresh = true;
-            }
-            if(do_open) {
+                break;
+            case Action::open: {
                 const auto lock = download_progress.get_lock();
-                if(download_progress.data.contains(target_id)) {
-                    const auto& progress = download_progress.data[target_id];
+                if(download_progress.data.contains(target_id.id)) {
+                    const auto& progress = download_progress.data[target_id.id];
                     auto        complete = true;
                     for(auto c : progress.second) {
                         if(!c) {
@@ -520,6 +527,10 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
                         run_command(command.data());
                     }
                 }
+            } break;
+            case Action::input:
+                input(key, "range: ");
+                break;
             }
         }
         break;
