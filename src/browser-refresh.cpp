@@ -33,7 +33,7 @@ auto Browser::refresh_callback() -> void {
                 } else {
                     gawl::draw_rect(this, area, color);
                 }
-                gallary_contents_font.draw_fit_rect(this, area, {1.0, 1.0, 1.0, 1.0}, get_display_string(g).data(), gawl::Align::left);
+                gallary_contents_font.draw_fit_rect(this, area, {1.0, 1.0, 1.0, 1.0}, get_display_string(g).data(), {.alignx = gawl::Align::left});
             }
             y += Layout::gallery_contents_height;
             if(tab.type == TabType::reading) {
@@ -133,7 +133,7 @@ auto Browser::refresh_callback() -> void {
                 auto info_area = gawl::Rectangle{
                     {layout_type == 0 ? layout[1].a.x : thumbnail_bottom, layout_type == 0 ? thumbnail_bottom : layout[1].a.y}, {layout[1].b.x, layout[1].b.y}};
 
-                work_info_font.draw_wrapped(this, info_area, 24, Color::white, work_info.str().data(), gawl::Align::left, gawl::Align::left);
+                work_info_font.draw_wrapped(this, info_area, 24, Color::white, work_info.str().data(), {.alignx = gawl::Align::left, .aligny = gawl::Align::left});
             }
         }
     }
@@ -172,7 +172,7 @@ auto Browser::refresh_callback() -> void {
             return false;
         };
         const auto text   = input_prompt + input_buffer.data();
-        const auto drawed = input_font.draw_fit_rect(this, area, {0.8, 0.8, 0.8, 1.0}, text.data(), gawl::Align::left, gawl::Align::center, draw_func);
+        const auto drawed = input_font.draw_fit_rect(this, area, {0.8, 0.8, 0.8, 1.0}, text.data(), {.alignx = gawl::Align::left, .aligny = gawl::Align::center, .func = draw_func});
         if(input_buffer.size() == static_cast<size_t>(input_cursor)) {
             gawl::draw_rect(this, {{drawed.b.x, area.a.y + 5}, {drawed.b.x + Layout::input_cursor_size[0], area.b.y - 5}}, {1, 1, 1, 1});
         }
