@@ -1,3 +1,4 @@
+#include <array>
 #include <cstring>
 
 #include "search-category.hpp"
