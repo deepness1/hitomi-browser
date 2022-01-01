@@ -348,24 +348,28 @@ Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow({.app = app, 
                     download_progress.data[next.id].second.resize(next.range.has_value() ? next.range->second - next.range->first : w.get_pages());
                 }
                 download_cancel_id.store(-1);
-                const auto r = w.download({savepath.data(), IMAGE_DOWNLOAD_THREADS, true, [this, next](uint64_t page) -> bool {
-                                               auto canceled = bool();
-                                               {
-                                                   const auto lock = download_cancel_id.get_lock();
-                                                   canceled        = next.id == download_cancel_id.data;
-                                                   if(!canceled) {
-                                                       std::lock_guard<std::mutex> lock(download_progress.mutex);
-                                                       download_progress.data[next.id].second[page - (next.range.has_value() ? next.range->first : 0)] = true;
-                                                   }
-                                               }
-                                               refresh();
-                                               return !canceled && !finish_subthreads;
-                                           },
-                                           next.range});
-                if(r != nullptr) {
-                    show_message(r);
-                } else {
-                    refresh();
+                auto r = (const char*)(nullptr);
+                while(true) {
+                    r = w.download({savepath.data(), IMAGE_DOWNLOAD_THREADS, true, [this, next](uint64_t page) -> bool {
+                                        auto canceled = bool();
+                                        {
+                                            const auto lock = download_cancel_id.get_lock();
+                                            canceled        = next.id == download_cancel_id.data;
+                                            if(!canceled) {
+                                                std::lock_guard<std::mutex> lock(download_progress.mutex);
+                                                download_progress.data[next.id].second[page - (next.range.has_value() ? next.range->first : 0)] = true;
+                                            }
+                                        }
+                                        refresh();
+                                        return !canceled && !finish_subthreads;
+                                    },
+                                    next.range});
+                    if(r != nullptr) {
+                        show_message(r);
+                    } else {
+                        refresh();
+                        break;
+                    }
                 }
             } else {
                 download_event.wait();
