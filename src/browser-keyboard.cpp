@@ -90,18 +90,18 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
     switch(key) {
     case KEY_LEFTCTRL:
     case KEY_RIGHTCTRL:
-        if(state == gawl::ButtonState::press) {
+        if(state == gawl::ButtonState::Press) {
             control = true;
-        } else if(state == gawl::ButtonState::release) {
+        } else if(state == gawl::ButtonState::Release) {
             control = false;
         }
         return;
         break;
     case KEY_LEFTSHIFT:
     case KEY_RIGHTSHIFT:
-        if(state == gawl::ButtonState::press) {
+        if(state == gawl::ButtonState::Press) {
             shift = true;
-        } else if(state == gawl::ButtonState::release) {
+        } else if(state == gawl::ButtonState::Release) {
             shift = false;
         }
         return;
@@ -114,13 +114,13 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
     if(static_cast<int>(input_key) != -1) {
         switch(key) {
         case KEY_ESC:
-            if(state == gawl::ButtonState::press) {
+            if(state == gawl::ButtonState::Press) {
                 input_key = -1;
                 refresh();
             }
             return;
         case KEY_ENTER:
-            if(state == gawl::ButtonState::press) {
+            if(state == gawl::ButtonState::Press) {
                 key          = input_key;
                 input_key    = -1;
                 input_result = true;
@@ -129,7 +129,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
             return;
         case KEY_LEFT:
         case KEY_RIGHT:
-            if((state != gawl::ButtonState::release) && ((key == KEY_LEFT && input_cursor > 0) || (key == KEY_RIGHT && static_cast<size_t>(input_cursor) < input_buffer.size()))) {
+            if((state != gawl::ButtonState::Release) && ((key == KEY_LEFT && input_cursor > 0) || (key == KEY_RIGHT && static_cast<size_t>(input_cursor) < input_buffer.size()))) {
                 if(key == KEY_LEFT) {
                     input_cursor -= 1;
                 } else if(key == KEY_RIGHT) {
@@ -139,20 +139,20 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
             }
             return;
         case KEY_BACKSPACE:
-            if(state != gawl::ButtonState::release && input_cursor > 0) {
+            if(state != gawl::ButtonState::Release && input_cursor > 0) {
                 input_cursor -= 1;
                 input_buffer.erase(input_cursor, 1);
                 refresh();
             }
             return;
         case KEY_DELETE:
-            if(state != gawl::ButtonState::release && static_cast<size_t>(input_cursor) < input_buffer.size()) {
+            if(state != gawl::ButtonState::Release && static_cast<size_t>(input_cursor) < input_buffer.size()) {
                 input_buffer.erase(input_cursor, 1);
                 refresh();
             }
             return;
         default:
-            if(state == gawl::ButtonState::release) {
+            if(state == gawl::ButtonState::Release) {
                 return;
             }
             input_buffer.insert(input_cursor, {keycode_to_char(key, shift)});
@@ -165,7 +165,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
     constexpr auto ADJUST_TRIGGER_KEYS = std::array{NEXT_WORK, PREV_WORK, NEXT_TAB, PREV_TAB, REMOVE_WORK};
 
     auto do_refresh = false;
-    if(state == gawl::ButtonState::press) {
+    if(state == gawl::ButtonState::Press) {
         if(auto p = std::find(ADJUST_TRIGGER_KEYS.begin(), ADJUST_TRIGGER_KEYS.end(), key); p != ADJUST_TRIGGER_KEYS.end()) {
             key_press_count += 1;
         }
@@ -173,7 +173,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
     switch(key) {
     case NEXT_WORK:
     case PREV_WORK:
-        if(state == gawl::ButtonState::press || state == gawl::ButtonState::repeat) {
+        if(state == gawl::ButtonState::Press || state == gawl::ButtonState::Repeat) {
             const auto lock    = tabs.get_lock();
             const auto tab_ptr = tabs.data.current();
             if(tab_ptr == nullptr) {
@@ -194,7 +194,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         break;
     case SCALE_UP:
     case SCALE_DOWN:
-        if(state == gawl::ButtonState::press && control) {
+        if(state == gawl::ButtonState::Press && control) {
             const auto new_scale = get_scale() + (key == SCALE_DOWN ? -0.2 : 0.2);
             if(new_scale >= 0.1) {
                 set_scale(new_scale);
@@ -202,13 +202,13 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         }
         break;
     case SCALE_RESET:
-        if(state == gawl::ButtonState::press && control) {
+        if(state == gawl::ButtonState::Press && control) {
             set_scale(0);
         }
         break;
     case NEXT_TAB:
     case PREV_TAB:
-        if(state == gawl::ButtonState::press || state == gawl::ButtonState::repeat) {
+        if(state == gawl::ButtonState::Press || state == gawl::ButtonState::Repeat) {
             const auto lock = tabs.get_lock();
             if(!shift) {
                 if((key == NEXT_TAB && tabs.data++) || (key == PREV_TAB && tabs.data--)) {
@@ -231,7 +231,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         break;
     case CREATE_NAMED_TAB:
         if(!input_result) {
-            if(state == gawl::ButtonState::press) {
+            if(state == gawl::ButtonState::Press) {
                 input(key, "tab name: ");
             }
         } else {
@@ -246,7 +246,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         }
         break;
     case DELETE_TAB:
-        if(state != gawl::ButtonState::press) {
+        if(state != gawl::ButtonState::Press) {
             break;
         }
         {
@@ -269,7 +269,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         do_refresh = true;
         break;
     case RESTORE_TAB:
-        if(state != gawl::ButtonState::press || !last_deleted.has_value()) {
+        if(state != gawl::ButtonState::Press || !last_deleted.has_value()) {
             break;
         }
         {
@@ -281,7 +281,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         break;
     case CREATE_SEARCH_TAB:
         if(!input_result) {
-            if(state != gawl::ButtonState::press) {
+            if(state != gawl::ButtonState::Press) {
                 break;
             }
             if(shift) {
@@ -326,7 +326,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
                 const auto lock = tabs.get_lock();
                 current_exits   = get_current_work() != nullptr;
             }
-            if(current_exits && state == gawl::ButtonState::press) {
+            if(current_exits && state == gawl::ButtonState::Press) {
                 auto prompt = std::string();
                 if(!last_sent_tab.empty()) {
                     prompt = "send to(" + last_sent_tab + "): ";
@@ -377,7 +377,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         }
         break;
     case REMOVE_WORK:
-        if(state != gawl::ButtonState::release) {
+        if(state != gawl::ButtonState::Release) {
             const auto lock    = tabs.get_lock();
             const auto current = get_current_work();
             if(current == nullptr) {
@@ -395,7 +395,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         break;
     case JUMP_TO:
         if(!input_result) {
-            if(state == gawl::ButtonState::press) {
+            if(state == gawl::ButtonState::Press) {
                 input(key, "jump to: ");
             }
         } else {
@@ -438,7 +438,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         }
         break;
     case DOWNLOAD:
-        if(state == gawl::ButtonState::press) {
+        if(state == gawl::ButtonState::Press) {
             enum class Action {
                 open,
                 download,
@@ -535,7 +535,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         }
         break;
     case TOGGLE_LAYOUT:
-        if(state != gawl::ButtonState::press) {
+        if(state != gawl::ButtonState::Press) {
             break;
         }
         if(layout_type == 0) {
@@ -548,7 +548,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         break;
     case LAYOUT_MOVE_PLUS:
     case LAYOUT_MOVE_MINUS:
-        if(state == gawl::ButtonState::release) {
+        if(state == gawl::ButtonState::Release) {
             break;
         }
         if((key == LAYOUT_MOVE_PLUS && split_rate[layout_type] < 1.0) || (key == LAYOUT_MOVE_MINUS && split_rate[layout_type] > 0.0)) {
@@ -563,7 +563,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         break;
     case RENAME:
         if(!input_result) {
-            if(state != gawl::ButtonState::press) {
+            if(state != gawl::ButtonState::Press) {
                 break;
             }
             auto title = std::string();
@@ -587,7 +587,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
         do_refresh = true;
         break;
     case RESEARCH:
-        if(state != gawl::ButtonState::press) {
+        if(state != gawl::ButtonState::Press) {
             break;
         }
         const auto lock = tabs.get_lock();
@@ -604,7 +604,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
     if(do_refresh) {
         refresh();
     }
-    if(key_press_count > 0 && (!do_refresh || state == gawl::ButtonState::release)) {
+    if(key_press_count > 0 && (!do_refresh || state == gawl::ButtonState::Release)) {
         if(const auto p = std::find(ADJUST_TRIGGER_KEYS.begin(), ADJUST_TRIGGER_KEYS.end(), key); p != ADJUST_TRIGGER_KEYS.end()) {
             key_press_count -= 1;
             if(key_press_count == 0) {

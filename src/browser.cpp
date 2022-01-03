@@ -234,7 +234,7 @@ auto Browser::run_command(const char* const command) -> void {
 auto Browser::window_resize_callback() -> void {
     adjust_cache();
 }
-Browser::Browser(gawl::GawlApplication& app) : gawl::WaylandWindow({.app = app, .title = "hitomi browser", .manual_refresh = true}), temporary_directory("/tmp/hitomi-browser") {
+Browser::Browser(Gawl::WindowCreateHint& hint) : Gawl::Window(hint), temporary_directory("/tmp/hitomi-browser") {
     tab_font              = gawl::TextRender({"/usr/share/fonts/cascadia-code/CascadiaCode.ttf"}, 24);
     gallary_contents_font = gawl::TextRender({"/usr/share/fonts/noto-cjk/NotoSansCJK-Black.ttc", "/home/mojyack/documents/fonts/seguiemj.ttf"}, 22);
     input_font            = gawl::TextRender({"/usr/share/fonts/cascadia-code/CascadiaCode.ttf"}, 24);

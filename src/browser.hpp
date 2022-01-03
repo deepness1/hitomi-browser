@@ -1,5 +1,5 @@
 #pragma once
-#include <gawl/gawl.hpp>
+#include <gawl/wayland/gawl.hpp>
 
 #include "hitomi/hitomi.hpp"
 #include "tab.hpp"
@@ -8,7 +8,10 @@
 constexpr auto CACHE_DOWNLOAD_THREADS = 16;
 constexpr auto IMAGE_DOWNLOAD_THREADS = 16;
 constexpr auto SAVEDATA_PATH          = "/home/mojyack/.cache/hitomi-browser.dat";
-class Browser : public gawl::WaylandWindow {
+
+class Browser;
+using Gawl = gawl::Gawl<Browser>;
+class Browser : public Gawl::Window {
   private:
     using Cache = std::map<hitomi::GalleryID, std::shared_ptr<WorkWithThumbnail>>;
     gawl::Critical<Tabs> tabs;
@@ -42,7 +45,7 @@ class Browser : public gawl::WaylandWindow {
     gawl::Event                                    cache_event;
     std::thread                                    cache_download_threads[CACHE_DOWNLOAD_THREADS];
     std::thread                                    search_thread;
-    gawl::Event                                    message_event;
+    gawl::TimerEvent                               message_event;
     std::thread                                    message_timer;
     gawl::Critical<std::string>                    message;
     std::thread                                    download_thread;
@@ -67,11 +70,11 @@ class Browser : public gawl::WaylandWindow {
     auto cancel_download(hitomi::GalleryID id) -> void;
     auto delete_downloaded(hitomi::GalleryID id) -> void;
     auto run_command(const char* command) -> void;
-    auto window_resize_callback() -> void override;
-    auto refresh_callback() -> void override;
-    auto keyboard_callback(uint32_t key, gawl::ButtonState state) -> void override;
 
   public:
-    Browser(gawl::GawlApplication& app);
+    auto window_resize_callback() -> void;
+    auto refresh_callback() -> void;
+    auto keyboard_callback(uint32_t key, gawl::ButtonState state) -> void;
+    Browser(Gawl::WindowCreateHint& hint);
     ~Browser();
 };

@@ -1,5 +1,5 @@
 #pragma once
-#include <gawl/gawl.hpp>
+#include <gawl/wayland/gawl.hpp>
 
 namespace Layout {
 constexpr double tabbar                       = 35;
