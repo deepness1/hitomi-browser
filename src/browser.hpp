@@ -11,7 +11,7 @@ constexpr auto SAVEDATA_PATH          = "/home/mojyack/.cache/hitomi-browser.dat
 
 class Browser;
 using Gawl = gawl::Gawl<Browser>;
-class Browser : public Gawl::Window {
+class Browser : public Gawl::Window<Browser> {
   private:
     using Cache = std::map<hitomi::GalleryID, std::shared_ptr<WorkWithThumbnail>>;
     gawl::Critical<Tabs> tabs;

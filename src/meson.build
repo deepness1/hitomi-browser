@@ -1,7 +1,7 @@
 subdir('hitomi')
 
 browser_inc = []
-browser_dep = hitomi_dep + [dependency('fmt'), dependency('gawl', version : ['>=2.1', '<2.2'])]
+browser_dep = hitomi_dep + [dependency('fmt'), dependency('gawl', version : ['>=2.2', '<2.3'])]
 browser_files = hitomi_files + files('main.cpp', 'tab.cpp', 'browser.cpp', 'browser-keyboard.cpp', 'browser-refresh.cpp')
 
 search_inc = []
