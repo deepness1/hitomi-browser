@@ -17,14 +17,14 @@ namespace hitomi {
 namespace {
 auto get_index_version(const char* const index_name) -> uint64_t {
     const auto url    = fmt::format("ltn.hitomi.la/{}/version?_{}", index_name, static_cast<uint64_t>(get_current_time() * 1000));
-    const auto buffer = download_binary(url.data());
+    const auto buffer = download_binary(url.data(), nullptr, internal::REFERER);
     if(!buffer.has_value()) {
         return -1;
     }
     return std::stoi(reinterpret_cast<const char*>(buffer.value().data()));
 }
 auto get_data_by_range(const char* const url, const Range& range) -> std::vector<uint8_t> {
-    const auto buffer = download_binary(url, fmt::format("{}-{}", range[0], range[1]).data());
+    const auto buffer = download_binary(url, fmt::format("{}-{}", range[0], range[1]).data(), internal::REFERER);
     if(!buffer.has_value()) {
         return {};
     }
