@@ -515,14 +515,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
                 const auto lock = download_progress.get_lock();
                 if(download_progress.data.contains(target_id.id)) {
                     const auto& progress = download_progress.data[target_id.id];
-                    auto        complete = true;
-                    for(auto c : progress.second) {
-                        if(!c) {
-                            complete = false;
-                            break;
-                        }
-                    }
-                    if(complete) {
+                    if(std::all_of(progress.second.begin(), progress.second.end(), [](const bool v) { return v; })) {
                         const auto command = std::string("imgview \"") + progress.first + "\"";
                         run_command(command.data());
                     }

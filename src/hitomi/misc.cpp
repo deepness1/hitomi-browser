@@ -1,6 +1,8 @@
+#include <chrono>
 #include <cstring>
 #include <iomanip>
 #include <sstream>
+#include <thread>
 
 #include <curl/curl.h>
 #include <curl/easy.h>
@@ -76,6 +78,8 @@ auto download_binary(const char* const url, const char* const range, const char*
     if(referer != nullptr) {
         curl_easy_setopt(curl, CURLOPT_REFERER, referer);
     }
+
+download:
     const auto res = curl_easy_perform(curl);
     if(res != CURLE_OK) {
         return std::nullopt;
@@ -83,6 +87,10 @@ auto download_binary(const char* const url, const char* const range, const char*
     auto http_code = long();
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
     if((http_code != 200 && http_code != 206) || res == CURLE_ABORTED_BY_CALLBACK) {
+        if(http_code == 503) { // Service Unavailable
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            goto download;
+        }
         return std::nullopt;
     }
     return buffer;

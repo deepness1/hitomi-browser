@@ -38,7 +38,7 @@ auto Image::download(const char* const path, bool webp) const -> bool {
     }
 
     const auto referer = fmt::format("https://hitomi.la/reader/{}.html", id);
-    const auto buffer  = download_binary(webp ? url_webp.data() : url.data(), nullptr, referer.data(), 180);
+    const auto buffer  = download_binary(webp ? url_webp.data() : url.data(), nullptr, referer.data());
     if(!buffer.has_value()) {
         fprintf(stderr, ">failed to download %s from %s\n", base.data(), url.data());
         return false;

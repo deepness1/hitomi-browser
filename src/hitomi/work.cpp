@@ -111,7 +111,7 @@ auto Work::download_info() -> bool {
     }
 
     url    = fmt::format(GALLERY_BLOCK_URL, id);
-    buffer = download_binary(url.data());
+    buffer = download_binary(url.data(), nullptr, internal::REFERER);
     if(!buffer) {
         return false;
     }
@@ -170,7 +170,7 @@ auto Work::download(const DownloadParameters& parameters) -> const char* {
                     }
                 }
                 const auto r = images[i].download(parameters.savedir, parameters.webp);
-                if(parameters.callback && !parameters.callback(i)) {
+                if(parameters.callback && !parameters.callback(i, r)) {
                     break;
                 }
                 if(!r) {
