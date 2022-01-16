@@ -71,10 +71,12 @@ Image::Image(const GalleryID id, const nlohmann::json& info) : id(id) {
     const auto filebase = name.substr(0, sep);
     const auto fileext  = name.substr(sep);
 
-    auto subdomain = std::string{static_cast<char>(97 + number_of_frontends), 'b'};
-    url            = fmt::format(IMAGE_URL, subdomain, "images", GG_B, hash_num_str, hash, fileext);
+    const auto subdomain_a = static_cast<char>(97 + number_of_frontends);
+    const auto subdomain   = std::string{subdomain_a, 'b'};
+    url                    = fmt::format(IMAGE_URL, subdomain, "images", GG_B, hash_num_str, hash, fileext);
     if(haswebp) {
-        url_webp = fmt::format(IMAGE_URL, 'a', "webp", GG_B, hash_num_str, hash, ".webp");
+        const auto subdomain = std::string{subdomain_a, 'a'};
+        url_webp             = fmt::format(IMAGE_URL, subdomain, "webp", GG_B, hash_num_str, hash, ".webp");
     }
     url_thumbnail = fmt::format(THUMBNAIL_URL, hash_a, hash_b, hash);
 }
