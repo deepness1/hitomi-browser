@@ -34,7 +34,7 @@ auto Work::get_thumbnail() -> std::optional<std::vector<uint8_t>> {
     if(images.empty()) {
         return std::nullopt;
     }
-    return download_binary(images[0].get_thumbnail_url().data(), nullptr, internal::REFERER, 15);
+    return download_binary(images[0].get_thumbnail_url().data(), {.referer = internal::REFERER, .timeout = 15});
 }
 auto Work::get_language() const -> const std::string& {
     return language;
@@ -71,7 +71,7 @@ auto Work::download_info() -> bool {
         return false;
     }
     auto url    = fmt::format(WORK_INFO_URL, id);
-    auto buffer = download_binary(url.data(), nullptr, internal::REFERER);
+    auto buffer = download_binary(url.data(), {.referer = internal::REFERER});
     if(!buffer.has_value()) {
         return false;
     }
@@ -111,7 +111,7 @@ auto Work::download_info() -> bool {
     }
 
     url    = fmt::format(GALLERY_BLOCK_URL, id);
-    buffer = download_binary(url.data(), nullptr, internal::REFERER);
+    buffer = download_binary(url.data(), {.referer = internal::REFERER});
     if(!buffer) {
         return false;
     }

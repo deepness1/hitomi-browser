@@ -7,9 +7,9 @@
 #include "misc.hpp"
 
 namespace {
-constexpr const char* IMAGE_URL     = "{}.hitomi.la/{}/{}/{}/{}{}";
-constexpr const char* THUMBNAIL_URL = "tn.hitomi.la/smallbigtn/{}/{}/{}.jpg";
-constexpr bool SUBDOMAIN_TABLE[] = {
+constexpr const char* IMAGE_URL         = "{}.hitomi.la/{}/{}/{}/{}{}";
+constexpr const char* THUMBNAIL_URL     = "tn.hitomi.la/smallbigtn/{}/{}/{}.jpg";
+constexpr bool        SUBDOMAIN_TABLE[] = {
 #include "subdomain-table.txt"
 };
 } // namespace
@@ -38,7 +38,7 @@ auto Image::download(const char* const path, bool webp) const -> bool {
     }
 
     const auto referer = fmt::format("https://hitomi.la/reader/{}.html", id);
-    const auto buffer  = download_binary(webp ? url_webp.data() : url.data(), nullptr, referer.data(), 120);
+    const auto buffer  = download_binary(webp ? url_webp.data() : url.data(), {.referer = referer.data(), .timeout = 120});
     if(!buffer.has_value()) {
         fprintf(stderr, ">failed to download %s from %s\n", base.data(), url.data());
         return false;
@@ -51,9 +51,9 @@ auto Image::download(const char* const path, bool webp) const -> bool {
 Image::Image(const GalleryID id, const nlohmann::json& info) : id(id) {
     name = info["name"].get<std::string>();
 
-    const auto hash   = info["hash"].get<std::string>();
-    const auto hash_a = hash.back();
-    const auto hash_b = hash.substr(hash.size() - 3, 2);
+    const auto hash    = info["hash"].get<std::string>();
+    const auto hash_a  = hash.back();
+    const auto hash_b  = hash.substr(hash.size() - 3, 2);
     const auto hash_ab = hash_a + hash_b;
 
     auto hash_num = int();
@@ -62,9 +62,9 @@ Image::Image(const GalleryID id, const nlohmann::json& info) : id(id) {
     } catch(const std::invalid_argument&) {
         throw std::runtime_error("invalid hash");
     }
-    const auto number_of_frontends = SUBDOMAIN_TABLE[hash_num];
-    constexpr auto GG_B = "1641304076";
-    const auto hash_num_str = std::to_string(hash_num);
+    const auto     number_of_frontends = SUBDOMAIN_TABLE[hash_num];
+    constexpr auto GG_B                = "1641304076";
+    const auto     hash_num_str        = std::to_string(hash_num);
 
     const auto haswebp  = info.contains("haswebp") && (info["haswebp"].get<int>() == 1);
     const auto sep      = name.rfind(".");
@@ -74,8 +74,7 @@ Image::Image(const GalleryID id, const nlohmann::json& info) : id(id) {
     auto subdomain = std::string{static_cast<char>(97 + number_of_frontends), 'b'};
     url            = fmt::format(IMAGE_URL, subdomain, "images", GG_B, hash_num_str, hash, fileext);
     if(haswebp) {
-        subdomain[1] = 'a';
-        url_webp     = fmt::format(IMAGE_URL, subdomain, "webp", GG_B, hash_num_str, hash, ".webp");
+        url_webp = fmt::format(IMAGE_URL, 'a', "webp", GG_B, hash_num_str, hash, ".webp");
     }
     url_thumbnail = fmt::format(THUMBNAIL_URL, hash_a, hash_b, hash);
 }

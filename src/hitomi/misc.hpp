@@ -2,13 +2,22 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <string_view>
 #include <vector>
 
 #include <linux/byteorder/little_endian.h>
 
 namespace hitomi {
 using Range = std::array<uint64_t, 2>;
-auto download_binary(const char* url, const char* range = nullptr, const char* referer = nullptr, int timeout = 5) -> std::optional<std::vector<uint8_t>>;
+
+struct DownloadParameters {
+    const char* range   = nullptr;
+    const char* referer = nullptr;
+    int         timeout = 0;
+};
+
+auto download_binary(const char* url, const DownloadParameters& parameters) -> std::optional<std::vector<uint8_t>>;
+
 class ByteReader {
   private:
     const uint8_t* data;
@@ -28,7 +37,7 @@ class ByteReader {
         pos += size;
         return read(pos - size, size);
     }
-    auto read(const size_t offset, const size_t size) const  -> std::vector<uint8_t> {
+    auto read(const size_t offset, const size_t size) const -> std::vector<uint8_t> {
         return std::vector<uint8_t>(data + offset, data + offset + size);
     }
     auto read_32_endian() -> uint32_t {

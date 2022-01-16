@@ -1,3 +1,4 @@
+#include <charconv>
 #include <chrono>
 #include <cstring>
 #include <iomanip>
@@ -64,35 +65,74 @@ auto finish_hitomi() -> bool {
     curl_global_cleanup();
     return true;
 }
-auto download_binary(const char* const url, const char* const range, const char* const referer, const int timeout) -> std::optional<std::vector<uint8_t>> {
+auto download_binary(const char* const url, const DownloadParameters& parameters) -> std::optional<std::vector<uint8_t>> {
+    using Range                 = std::pair<std::optional<uint64_t>, std::optional<uint64_t>>;
+    constexpr auto str_to_range = [](const std::string_view range) -> Range {
+        auto       r = Range();
+        const auto p = range.find('-');
+        if(p != 0) {
+            r.first = 0;
+            std::from_chars(range.begin(), range.begin() + p, *r.first);
+        }
+        if(p + 1 != range.size()) {
+            r.second = 0;
+            std::from_chars(range.begin() + p + 1, range.end(), *r.second);
+        }
+        return r;
+    };
+    constexpr auto range_to_str = [](const Range& range) -> std::string {
+        auto       r     = std::string(16, '\0');
+        auto       begin = r.data();
+        const auto end   = begin + r.size();
+        if(range.first) {
+            const auto cr = std::to_chars(begin, end, *range.first);
+            begin         = cr.ptr;
+        }
+        *begin = '-';
+        begin += 1;
+        if(range.second) {
+            std::to_chars(begin, end, *range.second);
+        }
+        return r;
+    };
     const auto encoded = "https://" + encode_url(url);
     auto       buffer  = std::vector<uint8_t>();
     auto       curl    = CurlHandle();
     curl_easy_setopt(curl, CURLOPT_URL, encoded.data());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
-    if(range != nullptr) {
-        curl_easy_setopt(curl, CURLOPT_RANGE, range);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, parameters.timeout);
+    if(parameters.range != nullptr) {
+        curl_easy_setopt(curl, CURLOPT_RANGE, parameters.range);
     }
-    if(referer != nullptr) {
-        curl_easy_setopt(curl, CURLOPT_REFERER, referer);
+    if(parameters.referer != nullptr) {
+        curl_easy_setopt(curl, CURLOPT_REFERER, parameters.referer);
     }
 
 download:
-    buffer.clear();
     const auto res = curl_easy_perform(curl);
     if(res != CURLE_OK) {
-        if(timeout != 0) { // timeout
-            goto download;
+        if(parameters.timeout == 0) {
+            return std::nullopt;
         }
-        return std::nullopt;
+        // timeout
+        auto r = parameters.range != nullptr ? str_to_range(parameters.range) : Range();
+        if(!r.first) {
+            r.first = 0;
+        }
+        *r.first += buffer.size();
+        curl_easy_setopt(curl, CURLOPT_RANGE, range_to_str(r).data());
+        goto download;
     }
     auto http_code = long();
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
     if((http_code != 200 && http_code != 206) || res == CURLE_ABORTED_BY_CALLBACK) {
         if(http_code == 503) { // Service Unavailable
             std::this_thread::sleep_for(std::chrono::seconds(1));
+            buffer.clear();
+            if(parameters.range != nullptr) {
+                curl_easy_setopt(curl, CURLOPT_RANGE, parameters.range);
+            }
             goto download;
         }
         return std::nullopt;

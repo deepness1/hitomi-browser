@@ -6,7 +6,7 @@
 constexpr auto* SEARCH_DOMAIN = "ltn.hitomi.la/{}.nozomi";
 namespace hitomi {
 auto fetch_ids(const char* const url) -> std::vector<hitomi::GalleryID> {
-    const auto buffer = download_binary(url, nullptr, internal::REFERER, 30);
+    const auto buffer = download_binary(url, {.referer = internal::REFERER, .timeout = 30});
     if(!buffer) {
         return {};
     }
