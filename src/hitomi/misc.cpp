@@ -80,8 +80,12 @@ auto download_binary(const char* const url, const char* const range, const char*
     }
 
 download:
+    buffer.clear();
     const auto res = curl_easy_perform(curl);
     if(res != CURLE_OK) {
+        if(timeout != 0) { // timeout
+            goto download;
+        }
         return std::nullopt;
     }
     auto http_code = long();
