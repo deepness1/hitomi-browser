@@ -59,8 +59,8 @@ constexpr const char* HELP =
     R"(Usage: hitomi-download [options] IDs ...
 Options:
     -h, --help          Print this help
-    -w, --webp          Download webp compressed images if possible [default="./downloads"]
-    -o, --output DIR    Specify output directory
+    -w, --webp          Download webp compressed images if possible
+    -o, --output DIR    Specify output directory [default="./downloads"]
     -j, --jobs N        Download N files in parallel [default=8])";
 
 auto replace_illeggal_chara(std::string const& str) -> std::string {
