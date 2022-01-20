@@ -8,7 +8,7 @@
 
 namespace {
 constexpr const char* IMAGE_URL         = "{}.hitomi.la/{}/{}/{}/{}{}";
-constexpr const char* THUMBNAIL_URL     = "tn.hitomi.la/smallbigtn/{}/{}/{}.jpg";
+constexpr const char* THUMBNAIL_URL     = "btn.hitomi.la/webpbigtn/{}/{}/{}.webp";
 constexpr bool        SUBDOMAIN_TABLE[] = {
 #include "subdomain-table.txt"
 };
