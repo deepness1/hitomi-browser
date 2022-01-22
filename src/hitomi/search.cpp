@@ -6,6 +6,7 @@
 #include "search-parse.hpp"
 #include "search.hpp"
 #include "type.hpp"
+#include "util.hpp"
 
 namespace hitomi {
 namespace {
@@ -86,7 +87,7 @@ auto split(const char* const str) -> std::vector<std::string> {
         result.emplace_back(str + start, str + start + arglen);
     }
     // if(qot) {
-    //     printf("One of the quotes is open\n");
+    //     internal::warn("one of the quotes is open\n");
     // }
     return result;
 }

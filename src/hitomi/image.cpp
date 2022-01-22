@@ -5,6 +5,7 @@
 
 #include "image.hpp"
 #include "misc.hpp"
+#include "util.hpp"
 
 namespace {
 constexpr const char* IMAGE_URL         = "{}.hitomi.la/{}/{}/{}/{}{}";
@@ -40,7 +41,7 @@ auto Image::download(const char* const path, bool webp) const -> bool {
     const auto referer = fmt::format("https://hitomi.la/reader/{}.html", id);
     const auto buffer  = download_binary(webp ? url_webp.data() : url.data(), {.referer = referer.data(), .timeout = 120});
     if(!buffer.has_value()) {
-        fprintf(stderr, ">failed to download %s from %s\n", base.data(), url.data());
+        internal::warn(">failed to download ", base.data(), " from ", url.data());
         return false;
     }
 

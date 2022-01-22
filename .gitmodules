@@ -1,0 +1,6 @@
+[submodule "src/util"]
+	path = src/util
+	url = https://github.com/mojyack/cutil.git
+[submodule "src/hitomi/util"]
+	path = src/hitomi/util
+	url = https://github.com/mojyack/cutil.git

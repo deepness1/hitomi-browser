@@ -218,18 +218,11 @@ auto Browser::delete_downloaded(const hitomi::GalleryID id) -> void {
         download_progress.data.erase(id);
     }
 }
-auto Browser::run_command(const char* const command) -> void {
-    if(external_command_thread.joinable()) {
-        external_command_thread.join();
+auto Browser::run_command(const std::vector<const char*>& argv) -> void {
+    if(viewer_process && viewer_process->is_joinable()) {
+        viewer_process->join();
     }
-    const auto arg          = std::string(command);
-    external_command_thread = std::thread([this, arg]() {
-        const auto result = system(arg.data());
-        if(result != 0) {
-            show_message("system() failed.");
-            refresh();
-        }
-    });
+    viewer_process.emplace(argv);
 }
 auto Browser::window_resize_callback() -> void {
     adjust_cache();
@@ -411,8 +404,8 @@ Browser::~Browser() {
     if(download_thread.joinable()) {
         download_thread.join();
     }
-    if(external_command_thread.joinable()) {
-        external_command_thread.join();
+    if(viewer_process && viewer_process->is_joinable()) {
+        viewer_process->join();
     }
     hitomi::finish_hitomi();
     std::filesystem::remove_all(temporary_directory);
