@@ -64,7 +64,7 @@ Image::Image(const GalleryID id, const nlohmann::json& info) : id(id) {
         throw std::runtime_error("invalid hash");
     }
     const auto     number_of_frontends = SUBDOMAIN_TABLE[hash_num];
-    constexpr auto GG_B                = "1641389178";
+    constexpr auto GG_B                = "1643467685";
     const auto     hash_num_str        = std::to_string(hash_num);
 
     const auto haswebp  = info.contains("haswebp") && (info["haswebp"].get<int>() == 1);
