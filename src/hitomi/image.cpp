@@ -64,7 +64,7 @@ Image::Image(const GalleryID id, const nlohmann::json& info) : id(id) {
         throw std::runtime_error("invalid hash");
     }
     const auto     number_of_frontends = SUBDOMAIN_TABLE[hash_num];
-    constexpr auto GG_B                = "1643467685";
+    constexpr auto GG_B                = "1643817601";
     const auto     hash_num_str        = std::to_string(hash_num);
 
     const auto haswebp  = info.contains("haswebp") && (info["haswebp"].get<int>() == 1);
@@ -73,7 +73,7 @@ Image::Image(const GalleryID id, const nlohmann::json& info) : id(id) {
     const auto fileext  = name.substr(sep);
 
     const auto subdomain_a = static_cast<char>(97 + number_of_frontends);
-    const auto subdomain   = std::string{subdomain_a, 'b'};
+    const auto subdomain   = std::string{subdomain_a, 'a'};
     url                    = fmt::format(IMAGE_URL, subdomain, "images", GG_B, hash_num_str, hash, fileext);
     if(haswebp) {
         const auto subdomain = std::string{subdomain_a, 'a'};
