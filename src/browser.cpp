@@ -41,7 +41,7 @@ auto Browser::adjust_cache() -> void {
     {
         const auto lock = cache.get_lock();
         for(auto i : visible) {
-            if(auto w = cache.data.find(i); w == cache.data.end() || (w->second != nullptr && !w->second->work.has_info())) {
+            if(auto w = cache.data.find(i); w == cache.data.end()) {
                 request_download_cache(i);
             } else {
                 new_cache.emplace(*w);
@@ -117,8 +117,9 @@ auto Browser::get_display_string(const hitomi::GalleryID id) -> std::string {
 auto Browser::get_thumbnail(const hitomi::GalleryID id) -> gawl::Graphic {
     if(auto w = cache.data.find(id); w != cache.data.end()) {
         if(w->second) {
-            if(!w->second->thumbnail_buffer.empty()) {
-                w->second->thumbnail = gawl::Graphic(w->second->thumbnail_buffer);
+            if(!w->second->thumbnail_buffer.is_empty()) {
+                const auto& buffer   = w->second->thumbnail_buffer;
+                w->second->thumbnail = gawl::Graphic(gawl::PixelBuffer(buffer.begin(), buffer.get_size_raw()));
                 w->second->thumbnail_buffer.clear();
             }
             return w->second->thumbnail;
@@ -241,7 +242,7 @@ Browser::Browser(Gawl::WindowCreateHint& hint) : Gawl::Window<Browser>(hint), te
         layout_type   = save.layout_type;
         split_rate[0] = save.split_rate[0];
         split_rate[1] = save.split_rate[1];
-        tabs.data.load(file);
+        tabs->load(file);
     }
 
     // start subthreads
@@ -317,7 +318,7 @@ Browser::Browser(Gawl::WindowCreateHint& hint) : Gawl::Window<Browser>(hint), te
                 }
             }
             if(do_download) {
-                auto w = hitomi::Work();
+                auto w = std::optional<hitomi::Work>();
                 {
                     const auto lock = cache.get_lock();
                     if(cache.data.contains(next.id) && cache.data[next.id]) {
@@ -325,12 +326,11 @@ Browser::Browser(Gawl::WindowCreateHint& hint) : Gawl::Window<Browser>(hint), te
                     }
                 }
 
-                if(!w.has_info()) {
-                    w = hitomi::Work(next.id);
-                    w.download_info();
+                if(!w) {
+                    w.emplace(next.id);
                 }
                 auto savedir = std::to_string(next.id);
-                if(auto workname = savedir + " " + replace_illeggal_chara(w.get_display_name()); workname.size() < 256) {
+                if(auto workname = savedir + " " + replace_illeggal_chara(w->get_display_name()); workname.size() < 256) {
                     savedir = std::move(workname);
                 }
                 const auto savepath = temporary_directory + "/" + savedir;
@@ -338,23 +338,23 @@ Browser::Browser(Gawl::WindowCreateHint& hint) : Gawl::Window<Browser>(hint), te
                     const auto lock = download_progress.get_lock();
 
                     download_progress.data[next.id].first = savepath;
-                    download_progress.data[next.id].second.resize(next.range.has_value() ? next.range->second - next.range->first : w.get_pages());
+                    download_progress.data[next.id].second.resize(next.range.has_value() ? next.range->second - next.range->first : w->get_pages());
                 }
                 download_cancel_id.store(-1);
-                const auto r = w.download({savepath.data(), IMAGE_DOWNLOAD_THREADS, true, [this, next](const uint64_t page, const bool /*result*/) -> bool {
-                                               auto canceled = bool();
-                                               {
-                                                   const auto lock = download_cancel_id.get_lock();
-                                                   canceled        = next.id == download_cancel_id.data;
-                                                   if(!canceled) {
-                                                       std::lock_guard<std::mutex> lock(download_progress.mutex);
-                                                       download_progress.data[next.id].second[page - (next.range.has_value() ? next.range->first : 0)] = true;
-                                                   }
-                                               }
-                                               refresh();
-                                               return !canceled && !finish_subthreads;
-                                           },
-                                           next.range});
+                const auto r = w->download({savepath.data(), IMAGE_DOWNLOAD_THREADS, true, [this, next](const uint64_t page, const bool /*result*/) -> bool {
+                                                auto canceled = bool();
+                                                {
+                                                    const auto lock = download_cancel_id.get_lock();
+                                                    canceled        = next.id == download_cancel_id.data;
+                                                    if(!canceled) {
+                                                        std::lock_guard<std::mutex> lock(download_progress.mutex);
+                                                        download_progress.data[next.id].second[page - (next.range.has_value() ? next.range->first : 0)] = true;
+                                                    }
+                                                }
+                                                refresh();
+                                                return !canceled && !finish_subthreads;
+                                            },
+                                            next.range});
                 if(r != nullptr) {
                     show_message(r);
                 } else {

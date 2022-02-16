@@ -136,11 +136,10 @@ struct Tabs : public IndexData<Tab> {
 };
 
 struct WorkWithThumbnail {
-    hitomi::Work         work;
-    gawl::Graphic        thumbnail;
-    std::vector<uint8_t> thumbnail_buffer;
+    hitomi::Work            work;
+    gawl::Graphic           thumbnail;
+    hitomi::Vector<uint8_t> thumbnail_buffer;
     WorkWithThumbnail(const hitomi::GalleryID id) : work(id) {
-        work.download_info();
         auto buf = work.get_thumbnail();
         if(buf.has_value()) {
             thumbnail_buffer = std::move(buf.value());

@@ -1,9 +1,9 @@
 #pragma once
-#include <optional>
 #include <string>
 #include <vector>
 
 #include "image.hpp"
+#include "misc.hpp"
 #include "type.hpp"
 
 namespace hitomi {
@@ -22,20 +22,42 @@ class Work {
     std::string              type;
 
   public:
-    auto get_id() const -> GalleryID;
-    auto get_display_name() const -> std::string;
-    auto get_thumbnail() -> std::optional<std::vector<uint8_t>>;
-    auto get_language() const -> const std::string&;
-    auto get_pages() const -> uint64_t;
-    auto get_date() const -> const std::string&;
-    auto get_tags() const -> const std::vector<std::string>&;
-    auto get_artists() const -> const std::vector<std::string>&;
-    auto get_groups() const -> const std::vector<std::string>&;
-    auto get_type() const -> const std::string&;
-    auto get_series() const -> const std::vector<std::string>&;
-    auto has_id() const -> bool;
-    auto has_info() const -> bool;
-    auto download_info() -> bool;
+    auto get_id() const -> GalleryID {
+        return id;
+    }
+    auto get_display_name() const -> const std::string& {
+        return !japanese_title.empty() ? japanese_title : title;
+    }
+    auto get_thumbnail() -> std::optional<Vector<uint8_t>> {
+        if(images.empty()) {
+            return std::nullopt;
+        }
+        return internal::download_binary(images[0].get_thumbnail_url().data(), {.referer = internal::REFERER, .timeout = 15});
+    }
+    auto get_language() const -> const std::string& {
+        return language;
+    }
+    auto get_pages() const -> uint64_t {
+        return images.size();
+    }
+    auto get_date() const -> const std::string& {
+        return date;
+    }
+    auto get_tags() const -> const std::vector<std::string>& {
+        return tags;
+    }
+    auto get_artists() const -> const std::vector<std::string>& {
+        return artists;
+    }
+    auto get_groups() const -> const std::vector<std::string>& {
+        return groups;
+    }
+    auto get_type() const -> const std::string& {
+        return type;
+    }
+    auto get_series() const -> const std::vector<std::string>& {
+        return series;
+    }
 
     struct DownloadParameters {
         const char*                                  savedir;
@@ -44,9 +66,110 @@ class Work {
         std::function<bool(uint64_t, bool)>          callback   = nullptr;
         std::optional<std::pair<uint64_t, uint64_t>> page_range = std::nullopt;
     };
-    auto download(const DownloadParameters& parameters) -> const char*;
-    Work(GalleryID id);
-    Work();
-    ~Work(){};
+    auto download(const DownloadParameters& parameters) -> const char* {
+        if(!std::filesystem::exists(parameters.savedir) && !std::filesystem::create_directories(parameters.savedir)) {
+            return "failed to create save directory";
+        }
+
+        const auto page_begin = parameters.page_range.has_value() ? parameters.page_range->first : 0;
+        const auto page_end   = parameters.page_range.has_value() ? parameters.page_range->second : images.size();
+        if(page_begin >= page_end || page_end > images.size()) {
+            return "invalid page range";
+        }
+
+        auto index      = page_begin;
+        auto index_lock = std::mutex();
+        auto workers    = std::vector<std::thread>(parameters.threads);
+        auto error      = false;
+        for(auto& w : workers) {
+            w = std::thread([&]() {
+                while(true) {
+                    auto i = uint64_t();
+                    {
+                        const auto lock = std::lock_guard<std::mutex>(index_lock);
+                        if(index < page_end) {
+                            i = index;
+                            index += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                    const auto r = images[i].download(parameters.savedir, parameters.webp);
+                    if(parameters.callback && !parameters.callback(i, r)) {
+                        break;
+                    }
+                    if(!r) {
+                        error = true;
+                    }
+                }
+            });
+        }
+        for(auto& w : workers) {
+            w.join();
+        }
+        return error ? "unknown error" : nullptr;
+    }
+    Work(const GalleryID id) {
+        auto url    = fmt::format("ltn.hitomi.la/galleries/{}.js", id);
+        auto buffer = internal::download_binary(url.data(), {.referer = internal::REFERER});
+        internal::dynamic_assert(buffer.has_value(), "failed to download metadata");
+        const auto json_head = std::find(buffer.value().begin(), buffer.value().end(), '=');
+        internal::dynamic_assert(json_head != buffer.value().end(), "invalid json");
+        const auto json = nlohmann::json::parse(json_head + 1, buffer.value().end());
+        for(auto& [key, value] : json.items()) {
+            if(key == "title" && value.is_string()) {
+                title = value.get<std::string>();
+            } else if(key == "japanese_title" && value.is_string()) {
+                japanese_title = value.get<std::string>();
+            } else if(key == "language" && value.is_string()) {
+                language = value.get<std::string>();
+            } else if(key == "date" && value.is_string()) {
+                date = value.get<std::string>();
+            } else if(key == "tags" && value.is_array()) {
+                for(auto& t : value) {
+                    const auto male    = t.contains("male") && ((t["male"].is_string() && t["male"].get<std::string>() == "1") || (t["male"].is_number() && t["male"].get<int>() == 1));
+                    const auto female  = t.contains("female") && ((t["female"].is_string() && t["female"].get<std::string>() == "1") || (t["female"].is_number() && t["female"].get<int>() == 1));
+                    auto       tag_str = t["tag"].get<std::string>();
+                    if(male) {
+                        tag_str = "male:" + tag_str;
+                    } else if(female) {
+                        tag_str = "female:" + tag_str;
+                    }
+                    tags.emplace_back(tag_str);
+                }
+            } else if(key == "files" && value.is_array()) {
+                for(auto& i : value) {
+                    images.emplace_back(Image(id, i));
+                }
+            } else if(key == "type" && value.is_string()) {
+                type = value.get<std::string>();
+            }
+        }
+
+        url    = fmt::format("ltn.hitomi.la/galleryblock/{}.html", id);
+        buffer = internal::download_binary(url.data(), {.referer = internal::REFERER});
+        internal::dynamic_assert(buffer.has_value(), "failed to download metadata");
+
+        const auto parse_comma_list = [&buffer](const std::string& key) -> std::vector<std::string> {
+            const auto& arr    = buffer.value();
+            auto        result = std::vector<std::string>();
+            auto        pos    = arr.begin();
+            while(1) {
+                pos = std::search(pos, arr.end(), key.begin(), key.end());
+                if(pos == arr.end()) {
+                    break;
+                } else {
+                    const auto a = std::find(pos, arr.end(), '>') + 1;
+                    const auto b = std::find(a, arr.end(), '<');
+                    pos          = b + 1;
+                    result.emplace_back(a, b);
+                }
+            }
+            return result;
+        };
+        artists = parse_comma_list("/artist/");
+        groups  = parse_comma_list("/group/");
+        series  = parse_comma_list("/series/");
+    }
 };
 } // namespace hitomi

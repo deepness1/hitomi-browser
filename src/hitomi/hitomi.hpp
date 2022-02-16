@@ -1,8 +1,15 @@
 #pragma once
-#include "work.hpp"
 #include "search.hpp"
+#include "work.hpp"
 
 namespace hitomi {
-auto init_hitomi() -> bool;
-auto finish_hitomi() -> bool;
+inline auto init_hitomi() -> bool {
+    curl_global_init(CURL_GLOBAL_SSL);
+    internal::update_gg();
+    return true;
+}
+inline auto finish_hitomi() -> bool {
+    curl_global_cleanup();
+    return true;
+}
 }

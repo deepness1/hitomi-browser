@@ -301,8 +301,9 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
                         if(artists.empty()) {
                             break;
                         }
-                        artist = "-a ";
+                        artist = "\"a";
                         artist += artists[0];
+                        artist += "\"";
                     }
                 } while(0);
                 input(key, "search: ", artist.data());

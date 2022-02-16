@@ -92,9 +92,9 @@ int main(const int argc, const char* const argv[]) {
     if(args.threads == 0 || args.ids.size() == 0) {
         return -1;
     }
+    hitomi::init_hitomi();
     for(const auto i : args.ids) {
         auto w = hitomi::Work(i);
-        w.download_info();
         printf("%s\n", w.get_display_name().data());
         const auto save_path = std::filesystem::path(args.save_dir) / build_save_dir(w);
         while(true) {
@@ -105,5 +105,6 @@ int main(const int argc, const char* const argv[]) {
             printf(">Error: %s\n>Retry\n", r);
         }
     }
+    hitomi::finish_hitomi();
     return 0;
 }
