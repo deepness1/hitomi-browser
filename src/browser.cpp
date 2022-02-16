@@ -233,7 +233,6 @@ Browser::Browser(Gawl::WindowCreateHint& hint) : Gawl::Window<Browser>(hint), te
     gallary_contents_font = gawl::TextRender({"/usr/share/fonts/noto-cjk/NotoSansCJK-Black.ttc", "/home/mojyack/documents/fonts/seguiemj.ttf"}, 22);
     input_font            = gawl::TextRender({"/usr/share/fonts/cascadia-code/CascadiaCode.ttf"}, 24);
     work_info_font        = gawl::TextRender({"/usr/share/fonts/cascadia-code/CascadiaCode.ttf", "/home/mojyack/documents/fonts/seguiemj.ttf"}, 20);
-    hitomi::init_hitomi();
 
     // load savedata
     if(auto file = std::ifstream(SAVEDATA_PATH, std::ios::in | std::ios::binary); file) {
@@ -407,6 +406,5 @@ Browser::~Browser() {
     if(viewer_process && viewer_process->is_joinable()) {
         viewer_process->join();
     }
-    hitomi::finish_hitomi();
     std::filesystem::remove_all(temporary_directory);
 }

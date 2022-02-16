@@ -18,7 +18,7 @@ namespace hitomi::internal {
 struct DownloadParameters {
     const char* range   = nullptr;
     const char* referer = nullptr;
-    int         timeout = 0;
+    int         timeout = 30;
 };
 
 inline auto encode_url(std::string const& url) -> std::string {
