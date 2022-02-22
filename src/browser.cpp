@@ -291,10 +291,15 @@ Browser::Browser(Gawl::WindowCreateHint& hint) : Gawl::Window<Browser>(hint), te
                         continue;
                     }
                     refresh();
-                    auto w = new WorkWithThumbnail(id);
-                    {
+                    try {
+                        auto       w    = new WorkWithThumbnail(id);
                         const auto lock = cache.get_lock();
                         cache.data[id].reset(w);
+                    } catch(const std::runtime_error&) {
+                        // failed to download metadata
+                        // todo: show message
+                    }
+                    {
                     }
                     refresh();
                 } else {
