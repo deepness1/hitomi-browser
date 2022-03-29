@@ -285,7 +285,7 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
                 break;
             }
             if(shift) {
-                auto artist = std::string();
+                auto prompt = std::string();
                 do {
                     auto const p = get_current_work();
                     if(p == nullptr) {
@@ -297,16 +297,19 @@ auto Browser::keyboard_callback(uint32_t key, const gawl::ButtonState state) -> 
                         if(!w->second) {
                             break;
                         }
+                        const auto& groups  = w->second->work.get_groups();
                         const auto& artists = w->second->work.get_artists();
-                        if(artists.empty()) {
+                        if(!groups.empty()) {
+                            prompt = std::string("\"g") + groups[0] + "\"";
+                        } else if(!artists.empty()) {
+                            prompt = std::string("\"a") + artists[0] + "\"";
+                        } else {
                             break;
                         }
-                        artist = "\"a";
-                        artist += artists[0];
-                        artist += "\"";
+                        prompt += " ljapanese";
                     }
                 } while(0);
-                input(key, "search: ", artist.data());
+                input(key, "search: ", prompt.data());
             } else {
                 input(key, "search: ");
             }
