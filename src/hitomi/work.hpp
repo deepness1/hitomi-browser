@@ -143,33 +143,26 @@ class Work {
                 }
             } else if(key == "type" && value.is_string()) {
                 type = value.get<std::string>();
-            }
-        }
-
-        url    = fmt::format("ltn.hitomi.la/galleryblock/{}.html", id);
-        buffer = internal::download_binary(url.data(), {.referer = internal::REFERER});
-        internal::dynamic_assert(buffer.has_value(), "failed to download metadata");
-
-        const auto parse_comma_list = [&buffer](const std::string& key) -> std::vector<std::string> {
-            const auto& arr    = buffer.value();
-            auto        result = std::vector<std::string>();
-            auto        pos    = arr.begin();
-            while(1) {
-                pos = std::search(pos, arr.end(), key.begin(), key.end());
-                if(pos == arr.end()) {
-                    break;
-                } else {
-                    const auto a = std::find(pos, arr.end(), '>') + 1;
-                    const auto b = std::find(a, arr.end(), '<');
-                    pos          = b + 1;
-                    result.emplace_back(a, b);
+            } else if(key == "artists" && value.is_array()) {
+                for(auto& a : value) {
+                    if(a.contains("artist") && a["artist"].is_string()) {
+                        artists.emplace_back(a["artist"]);
+                    }
+                }
+            } else if(key == "groups" && value.is_array()) {
+                for(auto& g : value) {
+                    if(g.contains("group") && g["group"].is_string()) {
+                        groups.emplace_back(g["group"]);
+                    }
+                }
+            } else if(key == "parodys" && value.is_array()) {
+                for(auto& p : value) {
+                    if(p.contains("parody") && p["parody"].is_string()) {
+                        series.emplace_back(p["parody"]);
+                    }
                 }
             }
-            return result;
-        };
-        artists = parse_comma_list("/artist/");
-        groups  = parse_comma_list("/group/");
-        series  = parse_comma_list("/series/");
+        }
     }
 };
 } // namespace hitomi
