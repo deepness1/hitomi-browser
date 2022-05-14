@@ -114,12 +114,17 @@ auto download_binary(const char* const url, const DownloadParameters& parameters
     }
 
 download:
+    auto downloaded_size = buffer.get_size_raw();
+
     const auto res = curl_easy_perform(curl);
     if(res != CURLE_OK) {
         if(parameters.timeout == 0) {
             return std::nullopt;
         }
         // timeout
+        if(downloaded_size == buffer.get_size_raw()) {
+            return std::nullopt;
+        }
         auto r = parameters.range != nullptr ? str_to_range(parameters.range) : Range();
         if(!r.first) {
             r.first = 0;

@@ -4,3 +4,6 @@
 [submodule "src/hitomi/util"]
 	path = src/hitomi/util
 	url = https://github.com/mojyack/cutil.git
+[submodule "src/htk/util"]
+	path = src/htk/util
+	url = git@github.com:mojyack/cutil.git

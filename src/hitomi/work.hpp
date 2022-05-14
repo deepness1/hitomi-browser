@@ -109,7 +109,7 @@ class Work {
         }
         return error ? "unknown error" : nullptr;
     }
-    Work(const GalleryID id) {
+    Work(const GalleryID id) : id(id) {
         auto url    = fmt::format("ltn.hitomi.la/galleries/{}.js", id);
         auto buffer = internal::download_binary(url.data(), {.referer = internal::REFERER});
         internal::dynamic_assert(buffer.has_value(), "failed to download metadata");
