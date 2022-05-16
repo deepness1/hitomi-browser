@@ -114,7 +114,7 @@ class Table : public widget::Widget {
         }
 
         const auto info_str  = build_string(index + 1, "/", data.size());
-        const auto info_rect = font.get_rect(screen, {0, 0}, info_str.data());
+        const auto info_rect = font.get_rect(screen, info_str.data());
         const auto info_box  = gawl::Rectangle{{region.b.x - info_rect.width(), region.b.y - info_rect.height()}, region.b};
         gawl::draw_rect(screen, info_box, theme::background);
         font.draw_fit_rect(screen, info_box, {0.8, 0.8, 0.8, 1}, info_str.data());

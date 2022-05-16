@@ -61,7 +61,7 @@ class Tab : public widget::Widget {
     auto draw_data(gawl::concepts::Screen auto& screen, const size_t index, const double offset) -> double {
         auto&      current = nth(data, index);
         const auto label   = provider.get_label(current);
-        const auto rect    = font.get_rect(screen, {0, 0}, label.data());
+        const auto rect    = font.get_rect(screen, label.data());
 
         const auto& region  = this->get_region();
         auto        centerx = region.a.x + region.width() / 2;
