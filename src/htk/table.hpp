@@ -60,6 +60,9 @@ class Table : public widget::Widget {
             return false;
         } break;
         case Actions::EraseCurrent:
+            if(data.empty()) {
+                return false;
+            }
             if constexpr(TableProviderOptoinalOnErase<Provider, T>) {
                 provider.on_erase(data[index]);
             }
