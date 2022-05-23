@@ -8,6 +8,7 @@
 #include "util/thread.hpp"
 
 constexpr auto fontname = "Noto Sans CJK JP:style=Bold";
+constexpr auto emoji_fontname = "/home/mojyack/documents/fonts/seguiemj.ttf";
 
 using InputHander = std::function<void(std::string&)>;
 using InputOpener = std::function<void(InputHander, std::string, std::string, size_t)>;
