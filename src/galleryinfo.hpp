@@ -31,10 +31,6 @@ class GalleryInfo : public htk::widget::Widget {
         }
 
         auto& info = p->second.get<ThumbnailedWork>();
-        if(!info.thumbnail_buffer.is_empty()) {
-            info.thumbnail = gawl::Graphic(gawl::PixelBuffer(info.thumbnail_buffer.begin(), info.thumbnail_buffer.get_size_raw()));
-            info.thumbnail_buffer.clear();
-        }
 
         auto thumbnail_bottom = region.a.y;
         if(info.thumbnail) {

@@ -226,7 +226,7 @@ class Tab : public widget::Widget {
 
     template <class... Args>
     Tab(const Font font, const double tab_height, const double padding, const double spacing, Args&&... args) : provider(std::move(args)...),
-                                                                                                                font({fc::find_fontpath_from_name(font.name).data()}, font.size),
+                                                                                                                font(font.to_textrender()),
                                                                                                                 height(tab_height),
                                                                                                                 padding(padding),
                                                                                                                 spacing(spacing) {}

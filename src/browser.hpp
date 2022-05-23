@@ -27,7 +27,7 @@ class Browser {
                                                // Modal
                                                std::array<Modal::RegionPolicy, 2>{{{{Modal::SizePolicy::Relative, 1}, {0.5, 0.5}}, {{Modal::SizePolicy::Fixed, 48}, {0.5, 0.5}}}},
                                                // Tab
-                                               htk::Font{fontname, 32}, 40, 5, 10);
+                                               htk::Font{{fontname}, 32}, 40, 5, 10);
         auto  window_lock = std::mutex();
         window.set_locker([&window_lock]() { window_lock.lock(); }, [&window_lock]() { window_lock.unlock(); });
 
@@ -50,14 +50,14 @@ class Browser {
             message.show_message(std::move(text));
         };
         api.input = [&modal](const InputHander handler, std::string prompt, std::string buffer, const size_t cursor) {
-            auto& input = modal.open_modal(std::move(prompt), htk::Font{fontname, 32}, handler, [&modal]() {
+            auto& input = modal.open_modal(std::move(prompt), htk::Font{{fontname}, 32}, handler, [&modal]() {
                 modal.close_modal();
             });
             input.set_buffer(std::move(buffer), cursor);
         };
 
         auto download          = std::function<void(DownloadParameter)>();
-        auto thumbnail_manager = ThumbnailManager();
+        auto thumbnail_manager = ThumbnailManager(window.get_window());
         auto download_manager  = DownloadManager("/tmp/hitomi-browser");
         auto search_manager    = SearchManager([&tabs, &window_lock](const size_t id) {
             const auto lock = std::lock_guard(window_lock);

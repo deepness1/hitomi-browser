@@ -52,9 +52,10 @@ class ThumbnailManager {
         workers_event.wakeup();
     }
 
-    ThumbnailManager() {
+    ThumbnailManager(auto& window) {
         for(auto& w : workers) {
-            w = std::thread([this]() {
+            w = std::thread([this, &window]() {
+                auto context = window.fork_context();
                 while(!workers_exit) {
                     auto target = invalid_gallery_id;
                     {
@@ -76,6 +77,7 @@ class ThumbnailManager {
 
                             auto [lock, cache]  = get_data();
                             cache->data[target] = std::move(w);
+                            context.wait();
                             api.refresh_window();
                         } catch(const std::runtime_error&) {
                             auto [lock, cache]  = get_data();

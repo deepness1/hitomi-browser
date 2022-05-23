@@ -75,6 +75,9 @@ class Window {
     auto refresh() -> void {
         window.refresh();
     }
+    auto get_window() -> GawlWindow& {
+        return window;
+    }
     auto get_widget() -> RootWidget& {
         return root_widget;
     }

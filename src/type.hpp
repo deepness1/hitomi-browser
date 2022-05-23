@@ -19,14 +19,13 @@ enum class TabType : uint64_t {
 };
 
 struct ThumbnailedWork {
-    hitomi::Work            work;
-    gawl::Graphic           thumbnail;
-    hitomi::Vector<uint8_t> thumbnail_buffer;
+    hitomi::Work  work;
+    gawl::Graphic thumbnail;
 
     ThumbnailedWork(const hitomi::GalleryID id) : work(id) {
-        auto buf = work.get_thumbnail();
+        const auto buf = work.get_thumbnail();
         if(buf.has_value()) {
-            thumbnail_buffer = std::move(buf.value());
+            thumbnail = gawl::Graphic(gawl::PixelBuffer(buf->begin(), buf->get_size_raw()));
         } else {
             warn("failed to download thumbnail for ", id);
         }

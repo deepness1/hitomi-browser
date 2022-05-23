@@ -112,7 +112,7 @@ class Input : public widget::Widget {
     template <class... Args>
     Input(std::string prompt, const Font font, Args... args) : prompt(std::move(prompt)),
                                                                provider(std::move(args)...),
-                                                               font({fc::find_fontpath_from_name(font.name).data()}, font.size),
+                                                               font(font.to_textrender()),
                                                                font_size(font.size) {}
 };
 } // namespace htk::input

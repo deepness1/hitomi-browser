@@ -3,6 +3,8 @@
 
 #include <gawl/wayland/gawl.hpp>
 
+#include "fc.hpp"
+
 namespace htk {
 enum class Modifiers {
     None    = 0,
@@ -29,8 +31,22 @@ struct Keybind {
 using Keybinds = std::unordered_map<uint32_t, std::vector<Keybind>>;
 
 struct Font {
-    const char* name;
-    int         size;
+    // each name is treated as a raw path if it starts with '/'.
+    // else font name.
+    std::vector<const char*> names;
+    int                      size;
+
+    auto to_textrender() const -> gawl::TextRender {
+        auto n   = names;
+        auto buf = std::vector<std::string>();
+        for(auto& name : n) {
+            if(name[0] == '/') {
+                continue;
+            }
+            name = buf.emplace_back(fc::find_fontpath_from_name(name)).data();
+        }
+        return gawl::TextRender(n, size);
+    }
 };
 
 class RegionStack {

@@ -165,7 +165,7 @@ class Table : public widget::Widget {
 
     template <class... Args>
     Table(const Font font, const double row_height, Args&&... args) : provider(std::move(args)...),
-                                                                      font({fc::find_fontpath_from_name(font.name).data()}, font.size),
+                                                                      font(font.to_textrender()),
                                                                       row_height(row_height) {}
 };
 } // namespace htk::table
