@@ -398,8 +398,10 @@ class ReadingTab : public Tab<ReadingTabProvider> {
         return Tab::keyboard(key, modifiers, xkb_state);
     }
 
-    ReadingTab(std::string name, DownloadManager* const download_manager, std::function<void(hitomi::GalleryID)>* const erase_hook, ThumbnailManager* const manager, std::function<void()>* const visible_range_change_hook) : Tab(std::move(name), manager, visible_range_change_hook, download_manager, erase_hook),
-                                                                                                                                                                                                                               manager(*download_manager) {}
+    ReadingTab(std::string name, DownloadManager* const download_manager, ThumbnailManager* const manager, std::function<void()>* const visible_range_change_hook) : Tab(std::move(name), manager, visible_range_change_hook, download_manager, [&download_manager](const hitomi::GalleryID id) {
+                                                                                                                                                                         download_manager->erase(id);
+                                                                                                                                                                     }),
+                                                                                                                                                                     manager(*download_manager) {}
     ~ReadingTab() {
         if(reader) {
             reader->join();

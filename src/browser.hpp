@@ -106,8 +106,6 @@ class Browser {
             thumbnail_manager.set_visible_galleries(std::move(visible));
         });
 
-        auto on_erase = std::function<void(hitomi::GalleryID)>();
-
         const auto apply_tab_keybinds = [](htk::Variant<Layout<NormalTab>, Layout<SearchTab>, Layout<ReadingTab>>& layout) {
             layout.visit([&layout](auto& l) {
                 auto& keybinds = l.get_tab().get_keybinds();
@@ -140,12 +138,12 @@ class Browser {
             return l;
         };
 
-        const auto open_reading_tab = [&tabs, &savedata, &thumbnail_manager, &on_visible_range_change, &download_manager, &on_erase, apply_tab_keybinds](std::string title, const size_t pos) -> decltype(auto) {
+        const auto open_reading_tab = [&tabs, &savedata, &thumbnail_manager, &on_visible_range_change, &download_manager, apply_tab_keybinds](std::string title, const size_t pos) -> decltype(auto) {
             auto& l = tabs.insert(pos, std::in_place_type<Layout<ReadingTab>>,
                                   // Layout
                                   &savedata.layout_config, &thumbnail_manager, &on_visible_range_change,
                                   // ReadingTab
-                                  std::move(title), &download_manager, &on_erase);
+                                  std::move(title), &download_manager);
             apply_tab_keybinds(l);
             return l;
         };
@@ -228,10 +226,6 @@ class Browser {
         api.search = [&tabs, open_search_tab, &search_manager](std::string args) {
             auto& tab = open_search_tab(args, tabs.get_index() + 1).get<Layout<SearchTab>>().get_tab();
             tab.set_search_id(search_manager.search(std::move(args)));
-        };
-
-        on_erase = [&download_manager](const hitomi::GalleryID id) {
-            download_manager.erase(id);
         };
 
         window.set_finalizer([&tabs, &savedata]() {
