@@ -74,7 +74,7 @@ class DownloadManager {
             infos.erase(p);
         }
     }
-    auto get_data() -> std::pair<std::lock_guard<std::mutex>, std::unordered_map<hitomi::GalleryID, std::optional<DownloadInfo>>*> {
+    auto get_data() -> decltype(auto) {
         return std::pair<std::lock_guard<std::mutex>, std::unordered_map<hitomi::GalleryID, std::optional<DownloadInfo>>*>{data.mutex, &(data->infos)};
     }
 
