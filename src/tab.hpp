@@ -48,23 +48,16 @@ class TabProvider {
 
 class ReadingTabProvider : public TabProvider {
   private:
-    DownloadManager&                        download_manager;
-    std::function<void(hitomi::GalleryID)>& erase_hook;
+    DownloadManager& download_manager;
 
   public:
     auto on_erase(const hitomi::GalleryID data) -> void {
-        erase_hook(data);
+        download_manager.erase(data);
     }
 
     auto decorate(gawl::concepts::Screen auto& screen, const hitomi::GalleryID id, const gawl::Rectangle box) -> void {
-        const auto [lock, data] = download_manager.get_data();
-        const auto p            = data->find(id);
-        if(p == data->end()) {
-            return;
-        }
-
-        const auto& info = p->second;
-        if(!info) {
+        const auto r = download_manager.find_info(id);
+        if(r.info == nullptr) {
             return;
         }
 
@@ -72,7 +65,7 @@ class ReadingTabProvider : public TabProvider {
         constexpr auto color_page_done  = gawl::Color{1, 1, 0, 1};
         constexpr auto color_page_error = gawl::Color{1, 0, 0, 1};
 
-        const auto& status = info->status;
+        const auto& status = r.info->status;
         const auto  y      = box.b.y - 3;
         if(std::all_of(status.begin(), status.end(), [](const PageState s) { return s == PageState::Done; })) {
             gawl::draw_rect(screen, {{box.a.x, y}, {box.b.x, y + 3}}, color_all_done);
@@ -96,9 +89,8 @@ class ReadingTabProvider : public TabProvider {
         }
     }
 
-    ReadingTabProvider(ThumbnailManager* const thumbnail_manager, std::function<void()>* const visible_range_change_hook, DownloadManager* const download_manager, std::function<void(hitomi::GalleryID)>* const erase_hook) : TabProvider(thumbnail_manager, visible_range_change_hook),
-                                                                                                                                                                                                                               download_manager(*download_manager),
-                                                                                                                                                                                                                               erase_hook(*erase_hook) {}
+    ReadingTabProvider(ThumbnailManager* const thumbnail_manager, std::function<void()>* const visible_range_change_hook, DownloadManager* const download_manager) : TabProvider(thumbnail_manager, visible_range_change_hook),
+                                                                                                                                                                     download_manager(*download_manager) {}
 };
 
 template <class Provider>
@@ -367,40 +359,47 @@ class ReadingTab : public Tab<ReadingTabProvider> {
 
   public:
     auto keyboard(const xkb_keycode_t key, const htk::Modifiers modifiers, xkb_state* const xkb_state) -> bool {
-        do {
-            if(key - 8 != KEY_BACKSLASH) {
-                break;
+        if(key - 8 != KEY_BACKSLASH) {
+            return Tab::keyboard(key, modifiers, xkb_state);
+        }
+
+        const auto& ids = get_data();
+        if(ids.empty()) {
+            return Tab::keyboard(key, modifiers, xkb_state);
+        }
+
+        auto retry_parameter = DownloadParameter{};
+        {
+            const auto r = manager.find_info(ids[get_index()]);
+
+            if(r.info == nullptr) {
+                return false;
             }
 
-            const auto& ids = get_data();
-            if(ids.empty()) {
-                break;
+            for(const auto s : r.info->status) {
+                switch(s) {
+                case PageState::Done:
+                    break;
+                case PageState::Error: {
+                    if(r.parameter == nullptr) {
+                        return false;
+                    }
+                    retry_parameter = *r.parameter;
+                    goto retry;
+                } break;
+                case PageState::None:
+                    return false;
+                }
             }
-
-            const auto [lock, data] = manager.get_data();
-            const auto p            = data->find(ids[get_index()]);
-            if(p == data->end()) {
-                break;
-            }
-
-            const auto& info = p->second;
-            if(!info) {
-                break;
-            }
-
-            if(std::all_of(info->status.begin(), info->status.end(), [](const PageState s) { return s != PageState::None; })) {
-                run_command({"/usr/bin/imgview", info->path.data(), nullptr});
-            }
-
+            run_command({"/usr/bin/imgview", r.info->path.data(), nullptr});
             return false;
-        } while(0);
-
-        return Tab::keyboard(key, modifiers, xkb_state);
+        }
+    retry:
+        manager.add_queue(std::move(retry_parameter));
+        return true;
     }
 
-    ReadingTab(std::string name, DownloadManager* const download_manager, ThumbnailManager* const manager, std::function<void()>* const visible_range_change_hook) : Tab(std::move(name), manager, visible_range_change_hook, download_manager, [&download_manager](const hitomi::GalleryID id) {
-                                                                                                                                                                         download_manager->erase(id);
-                                                                                                                                                                     }),
+    ReadingTab(std::string name, DownloadManager* const download_manager, ThumbnailManager* const manager, std::function<void()>* const visible_range_change_hook) : Tab(std::move(name), manager, visible_range_change_hook, download_manager),
                                                                                                                                                                      manager(*download_manager) {}
     ~ReadingTab() {
         if(reader) {

@@ -20,9 +20,14 @@ struct DownloadParameter {
 
 class DownloadManager {
   private:
+    struct ManagedInfo {
+        bool         retry;
+        DownloadInfo info;
+    };
+
     struct Data {
-        std::vector<DownloadParameter>                                     queue;
-        std::unordered_map<hitomi::GalleryID, std::optional<DownloadInfo>> infos;
+        std::vector<DownloadParameter>                                    queue;
+        std::unordered_map<hitomi::GalleryID, std::optional<ManagedInfo>> infos;
     };
 
     std::string    temporary_directory;
@@ -48,8 +53,31 @@ class DownloadManager {
     }
 
   public:
+    struct FindResult {
+        std::unique_lock<std::mutex> lock;
+        const DownloadParameter*     parameter;
+        const DownloadInfo*          info;
+    };
+
     auto add_queue(DownloadParameter parameter) -> void {
         const auto lock = data.get_lock();
+
+        auto& queue = data->queue;
+        for(auto i = queue.begin(); i < queue.end(); i += 1) {
+            if(i->id == parameter.id) {
+                if(const auto p = data->infos.find(parameter.id); p != data->infos.end() && p->second) {
+                    p->second->retry = true;
+                    for(auto& s : p->second->info.status) {
+                        if(s == PageState::Error) {
+                            s = PageState::None;
+                        }
+                    }
+                    worker_event.wakeup();
+                    return;
+                }
+            }
+        }
+
         data->queue.emplace_back(std::move(parameter));
         worker_event.wakeup();
     }
@@ -68,14 +96,27 @@ class DownloadManager {
         if(auto p = infos.find(id); p != infos.end()) {
             auto& opt = p->second;
             if(opt) {
-                std::filesystem::remove_all(opt->path);
+                std::filesystem::remove_all(opt->info.path);
             }
 
             infos.erase(p);
         }
     }
-    auto get_data() -> decltype(auto) {
-        return std::pair<std::lock_guard<std::mutex>, std::unordered_map<hitomi::GalleryID, std::optional<DownloadInfo>>*>{data.mutex, &(data->infos)};
+    auto find_info(const hitomi::GalleryID id) -> FindResult {
+        auto r = FindResult{std::unique_lock(data.mutex), nullptr, nullptr};
+        for(const auto& q : data->queue) {
+            if(q.id == id) {
+                r.parameter = &q;
+                break;
+            }
+        }
+        if(r.parameter == nullptr) {
+            return r;
+        }
+        if(const auto p = data->infos.find(id); p != data->infos.end() && p->second) {
+            r.info = &(p->second->info);
+        }
+        return r;
     }
 
     DownloadManager(std::string temporary_directory) : temporary_directory(temporary_directory) {
@@ -91,18 +132,29 @@ class DownloadManager {
         worker = std::thread([this, temporary_directory]() {
             while(!worker_exit) {
                 auto target = std::optional<DownloadParameter>();
+
                 {
                     const auto lock = data.get_lock();
                     for(const auto& q : data->queue) {
                         auto p = data->infos.find(q.id);
-                        if(p != data->infos.end()) {
+                        if(p == data->infos.end()) {
+                            target = q;
+                            break;
+                        }
+                        auto& [_, info] = *p;
+                        if(info && !info->retry) {
                             continue;
                         } else {
+                            if(info) {
+                                info->retry = false;
+                            }
                             target = q;
+                            break;
                         }
                     }
+
                     if(target) {
-                        data->infos[target->id] = std::nullopt;
+                        data->infos.try_emplace(target->id, std::nullopt);
                     }
                 }
                 if(target) {
@@ -124,14 +176,16 @@ class DownloadManager {
                         if(p == data->infos.end()) {
                             continue;
                         }
-                        auto& info = p->second;
-                        info       = DownloadInfo{};
-                        info->path = savepath;
-                        if(target->range.has_value()) {
-                            const auto& range = *target->range;
-                            info->status.resize(range.second - range.first);
-                        } else {
-                            info->status.resize(w->get_pages());
+                        auto& managed = p->second;
+                        if(!managed) {
+                            managed.emplace(ManagedInfo{false, DownloadInfo{savepath, {}}});
+                            auto& info = managed->info;
+                            if(target->range.has_value()) {
+                                const auto& range = *target->range;
+                                info.status.resize(range.second - range.first);
+                            } else {
+                                info.status.resize(w->get_pages());
+                            }
                         }
                     }
 
@@ -149,9 +203,9 @@ class DownloadManager {
                                          return false;
                                      }
 
-                                     auto& info = p->second;
+                                     auto& info = p->second->info;
 
-                                     info->status[page - (target->range.has_value() ? target->range->first : 0)] = result ? PageState::Done : PageState::Error;
+                                     info.status[page - (target->range.has_value() ? target->range->first : 0)] = result ? PageState::Done : PageState::Error;
                                      api.refresh_window();
                                      return true;
                                  },

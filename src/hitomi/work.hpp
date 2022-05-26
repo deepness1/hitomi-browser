@@ -81,6 +81,7 @@ class Work {
         auto index_lock = std::mutex();
         auto workers    = std::vector<std::thread>(parameters.threads);
         auto error      = false;
+
         for(auto& w : workers) {
             w = std::thread([&]() {
                 while(true) {
