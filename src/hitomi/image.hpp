@@ -70,6 +70,9 @@ class Image {
                 }
             }
             internal::warn("failed to download ", base.data(), " from ", url.data());
+            if(std::filesystem::is_regular_file(filepath)) {
+                std::filesystem::remove(filepath);
+            }
             return false;
         }
     }
