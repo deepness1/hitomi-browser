@@ -21,7 +21,7 @@ class Browser {
         auto savedata = load_savedata();
 
         auto  app         = Window::Application();
-        auto& window      = app.open_window<Window>({.manual_refresh = true},
+        auto& window      = app.open_window<Window>({.title = "hitomi-browser", .manual_refresh = true},
                                                // Message
                                                // (none)
                                                // Modal
