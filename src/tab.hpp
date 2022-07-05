@@ -99,7 +99,20 @@ class Tab : public htk::table::Table<Provider, hitomi::GalleryID> {
     std::string       name;
     ThumbnailManager& manager;
 
+    auto find_current_id() -> std::optional<hitomi::GalleryID> {
+        auto& self_data = this->get_data();
+        if(self_data.empty()) {
+            return std::nullopt;
+        }
+        return self_data[this->get_index()];
+    }
+
     auto find_current_work() -> hitomi::Work* {
+        const auto id = find_current_id();
+        if(id == std::nullopt) {
+            return nullptr;
+        }
+
         auto& self_data = this->get_data();
         if(self_data.empty()) {
             return nullptr;
@@ -108,8 +121,7 @@ class Tab : public htk::table::Table<Provider, hitomi::GalleryID> {
         auto [lock, cache] = manager.get_data();
         auto& data         = cache->data;
 
-        const auto id = self_data[this->get_index()];
-        auto       p  = data.find(id);
+        auto p = data.find(*id);
         if(p == data.end()) {
             return nullptr;
         }
