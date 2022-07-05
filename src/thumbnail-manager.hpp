@@ -51,6 +51,15 @@ class ThumbnailManager {
         data = std::move(filtered_data);
         workers_event.wakeup();
     }
+    auto erase_cache(const hitomi::GalleryID id) -> bool {
+        auto [lock, cache] = get_data();
+        if(const auto p = cache->data.find(id); p == cache->data.end()) {
+            return false;
+        } else {
+            cache->data.erase(p);
+            return true;
+        }
+    }
 
     ThumbnailManager(auto& window) {
         for(auto& w : workers) {

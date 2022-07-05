@@ -225,6 +225,13 @@ class Tab : public htk::table::Table<Provider, hitomi::GalleryID> {
                       "jump: ", "", 0);
             return true;
         } break;
+        case KEY_C: {
+            const auto id = find_current_id();
+            if(id == std::nullopt) {
+                return false;
+            }
+            return manager.erase_cache(*id);
+        } break;
         }
         return htk::table::Table<Provider, hitomi::GalleryID>::keyboard(key, modifiers, xkb_state);
     }
