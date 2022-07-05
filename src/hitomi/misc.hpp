@@ -46,35 +46,6 @@ inline auto encode_url(std::string const& url) -> std::string {
 
 template <class T = uint8_t>
 auto download_binary(const char* const url, const DownloadParameters& parameters) -> std::optional<Vector<T>> {
-    using Range                 = std::pair<std::optional<uint64_t>, std::optional<uint64_t>>;
-    constexpr auto str_to_range = [](const std::string_view range) -> Range {
-        auto       r = Range();
-        const auto p = range.find('-');
-        if(p != 0) {
-            r.first = 0;
-            std::from_chars(range.begin(), range.begin() + p, *r.first);
-        }
-        if(p + 1 != range.size()) {
-            r.second = 0;
-            std::from_chars(range.begin() + p + 1, range.end(), *r.second);
-        }
-        return r;
-    };
-    constexpr auto range_to_str = [](const Range& range) -> std::string {
-        auto       r     = std::string(16, '\0');
-        auto       begin = r.data();
-        const auto end   = begin + r.size();
-        if(range.first) {
-            const auto cr = std::to_chars(begin, end, *range.first);
-            begin         = cr.ptr;
-        }
-        *begin = '-';
-        begin += 1;
-        if(range.second) {
-            std::to_chars(begin, end, *range.second);
-        }
-        return r;
-    };
     struct Callback {
         static auto write_callback(const void* const p, const size_t s, const size_t n, void* const u) -> size_t {
             auto&      buffer = *reinterpret_cast<Vector<T>*>(u);
@@ -113,24 +84,21 @@ auto download_binary(const char* const url, const DownloadParameters& parameters
         curl_easy_setopt(curl, CURLOPT_REFERER, parameters.referer);
     }
 
-download:
-    auto downloaded_size = buffer.get_size_raw();
+    constexpr auto retry_limit = 3;
+    auto           retry       = 0;
 
+download:
     const auto res = curl_easy_perform(curl);
     if(res != CURLE_OK) {
         if(parameters.timeout == 0) {
             return std::nullopt;
         }
         // timeout
-        if(downloaded_size == buffer.get_size_raw()) {
+        if(retry == retry_limit) {
             return std::nullopt;
         }
-        auto r = parameters.range != nullptr ? str_to_range(parameters.range) : Range();
-        if(!r.first) {
-            r.first = 0;
-        }
-        *r.first += buffer.get_size_raw();
-        curl_easy_setopt(curl, CURLOPT_RANGE, range_to_str(r).data());
+        retry += 1;
+        buffer.clear();
         goto download;
     }
     auto http_code = long();

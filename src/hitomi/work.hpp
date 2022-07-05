@@ -117,6 +117,7 @@ class Work {
         const auto json_head = std::find(buffer.value().begin(), buffer.value().end(), '=');
         internal::dynamic_assert(json_head != buffer.value().end(), "invalid json");
         const auto json = nlohmann::json::parse(json_head + 1, buffer.value().end());
+//nlohmann::detail::parse_error
         for(auto& [key, value] : json.items()) {
             if(key == "title" && value.is_string()) {
                 title = value.get<std::string>();
