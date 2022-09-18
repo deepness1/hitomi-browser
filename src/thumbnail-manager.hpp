@@ -18,23 +18,23 @@ struct Caches {
 
 class ThumbnailManager {
   private:
-    Critical<Caches> caches;
-
+    Critical<Caches>           critical_caches;
     Event                      workers_event;
     bool                       workers_exit = false;
     std::array<std::thread, 8> workers;
 
   public:
-    auto get_data() -> std::pair<std::lock_guard<std::mutex>, Caches*> {
-        return std::pair<std::lock_guard<std::mutex>, Caches*>{caches.mutex, &(*caches)};
+    auto get_caches() -> Critical<Caches>& {
+        return critical_caches;
     }
+
     auto set_visible_galleries(std::vector<hitomi::GalleryID> ids) -> void {
         std::sort(ids.begin(), ids.end(), std::greater<hitomi::GalleryID>());
         ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
 
-        auto [lock, cache] = get_data();
-        auto& data         = cache->data;
-        auto& source       = cache->source;
+        auto [lock, caches] = critical_caches.access();
+        auto& data          = caches.data;
+        auto& source        = caches.source;
 
         source = std::move(ids);
 
@@ -52,11 +52,11 @@ class ThumbnailManager {
         workers_event.wakeup();
     }
     auto erase_cache(const hitomi::GalleryID id) -> bool {
-        auto [lock, cache] = get_data();
-        if(const auto p = cache->data.find(id); p == cache->data.end()) {
+        auto [lock, caches] = critical_caches.access();
+        if(const auto p = caches.data.find(id); p == caches.data.end()) {
             return false;
         } else {
-            cache->data.erase(p);
+            caches.data.erase(p);
             return true;
         }
     }
@@ -68,9 +68,9 @@ class ThumbnailManager {
                 while(!workers_exit) {
                     auto target = invalid_gallery_id;
                     {
-                        auto [lock, cache] = get_data();
-                        auto& data         = cache->data;
-                        auto& source       = cache->source;
+                        auto [lock, caches] = critical_caches.access();
+                        auto& data          = caches.data;
+                        auto& source        = caches.source;
                         for(const auto i : source) {
                             const auto p = data.find(i);
                             if(p == data.end()) {
@@ -84,13 +84,13 @@ class ThumbnailManager {
                         try {
                             auto w = ThumbnailedWork(target);
 
-                            auto [lock, cache]  = get_data();
-                            cache->data[target] = std::move(w);
+                            auto [lock, caches] = critical_caches.access();
+                            caches.data[target] = std::move(w);
                             context.wait();
                             api.refresh_window();
                         } catch(const std::runtime_error&) {
-                            auto [lock, cache]  = get_data();
-                            cache->data[target] = CacheState::Error;
+                            auto [lock, caches] = critical_caches.access();
+                            caches.data[target] = CacheState::Error;
                             api.show_message(build_string("failed to download metadata for ", target));
                         }
                     } else {

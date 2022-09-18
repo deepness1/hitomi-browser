@@ -14,8 +14,8 @@ class TabProvider {
 
   public:
     auto get_label(const hitomi::GalleryID id) const -> std::string {
-        auto [lock, cache] = manager.get_data();
-        auto& data         = cache->data;
+        auto [lock, caches] = manager.get_caches().access();
+        auto& data          = caches.data;
 
         auto p = data.find(id);
         if(p == data.end()) {
@@ -118,8 +118,8 @@ class Tab : public htk::table::Table<Provider, hitomi::GalleryID> {
             return nullptr;
         }
 
-        auto [lock, cache] = manager.get_data();
-        auto& data         = cache->data;
+        auto [lock, caches] = manager.get_caches().access();
+        auto& data          = caches.data;
 
         auto p = data.find(*id);
         if(p == data.end()) {

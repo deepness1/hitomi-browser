@@ -31,7 +31,7 @@ class DownloadManager {
     };
 
     std::string    temporary_directory;
-    Critical<Data> data;
+    Critical<Data> critical_data;
 
     Event       worker_event;
     bool        worker_exit = false;
@@ -60,12 +60,12 @@ class DownloadManager {
     };
 
     auto add_queue(DownloadParameter parameter) -> void {
-        const auto lock = data.get_lock();
+        auto [lock, data] = critical_data.access();
 
-        auto& queue = data->queue;
+        auto& queue = data.queue;
         for(auto i = queue.begin(); i < queue.end(); i += 1) {
             if(i->id == parameter.id) {
-                if(const auto p = data->infos.find(parameter.id); p != data->infos.end() && p->second) {
+                if(const auto p = data.infos.find(parameter.id); p != data.infos.end() && p->second) {
                     p->second->retry = true;
                     for(auto& s : p->second->info.status) {
                         if(s == PageState::Error) {
@@ -78,13 +78,13 @@ class DownloadManager {
             }
         }
 
-        data->queue.emplace_back(std::move(parameter));
+        data.queue.emplace_back(std::move(parameter));
         worker_event.wakeup();
     }
     auto erase(const hitomi::GalleryID id) -> void {
-        const auto lock = data.get_lock();
+        auto [lock, data] = critical_data.access();
 
-        auto& queue = data->queue;
+        auto& queue = data.queue;
         for(auto i = queue.begin(); i < queue.end(); i += 1) {
             if(i->id == id) {
                 queue.erase(i);
@@ -92,7 +92,7 @@ class DownloadManager {
             }
         }
 
-        auto& infos = data->infos;
+        auto& infos = data.infos;
         if(auto p = infos.find(id); p != infos.end()) {
             auto& opt = p->second;
             if(opt) {
@@ -103,8 +103,9 @@ class DownloadManager {
         }
     }
     auto find_info(const hitomi::GalleryID id) -> FindResult {
-        auto r = FindResult{std::unique_lock(data.mutex), nullptr, nullptr};
-        for(const auto& q : data->queue) {
+        auto  r    = FindResult{std::unique_lock(critical_data.get_raw_mutex()), nullptr, nullptr};
+        auto& data = critical_data.assume_locked();
+        for(const auto& q : data.queue) {
             if(q.id == id) {
                 r.parameter = &q;
                 break;
@@ -113,7 +114,7 @@ class DownloadManager {
         if(r.parameter == nullptr) {
             return r;
         }
-        if(const auto p = data->infos.find(id); p != data->infos.end() && p->second) {
+        if(const auto p = data.infos.find(id); p != data.infos.end() && p->second) {
             r.info = &(p->second->info);
         }
         return r;
@@ -134,10 +135,10 @@ class DownloadManager {
                 auto target = std::optional<DownloadParameter>();
 
                 {
-                    const auto lock = data.get_lock();
-                    for(const auto& q : data->queue) {
-                        auto p = data->infos.find(q.id);
-                        if(p == data->infos.end()) {
+                    auto [lock, data] = critical_data.access();
+                    for(const auto& q : data.queue) {
+                        auto p = data.infos.find(q.id);
+                        if(p == data.infos.end()) {
                             target = q;
                             break;
                         }
@@ -154,7 +155,7 @@ class DownloadManager {
                     }
 
                     if(target) {
-                        data->infos.try_emplace(target->id, std::nullopt);
+                        data.infos.try_emplace(target->id, std::nullopt);
                     }
                 }
                 if(target) {
@@ -171,9 +172,9 @@ class DownloadManager {
                     }
                     const auto savepath = temporary_directory + "/" + savedir;
                     {
-                        const auto lock = data.get_lock();
-                        auto       p    = data->infos.find(id);
-                        if(p == data->infos.end()) {
+                        auto [lock, data] = critical_data.access();
+                        auto p            = data.infos.find(id);
+                        if(p == data.infos.end()) {
                             continue;
                         }
                         auto& managed = p->second;
@@ -196,10 +197,10 @@ class DownloadManager {
                                          return false;
                                      }
 
-                                     const auto lock = data.get_lock();
+                                     auto [lock, data] = critical_data.access();
 
-                                     auto p = data->infos.find(target->id);
-                                     if(p == data->infos.end()) {
+                                     auto p = data.infos.find(target->id);
+                                     if(p == data.infos.end()) {
                                          return false;
                                      }
 

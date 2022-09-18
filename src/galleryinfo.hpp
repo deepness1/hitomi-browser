@@ -19,9 +19,9 @@ class GalleryInfo : public htk::widget::Widget {
             return;
         }
 
-        auto [lock, cache] = manager.get_data();
-        auto& data         = cache->data;
-        auto  p            = data.find(id);
+        auto [lock, caches] = manager.get_caches().access();
+        auto& data          = caches.data;
+        auto  p             = data.find(id);
         if(p == data.end()) {
             return;
         }
