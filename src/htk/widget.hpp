@@ -26,9 +26,11 @@ class Widget {
     auto get_region() const -> const gawl::Rectangle& {
         return region;
     }
+
     auto set_region(const gawl::Rectangle& new_region) -> void {
         region = new_region;
     }
+
     auto get_keybinds() -> Keybinds& {
         return keybinds;
     }

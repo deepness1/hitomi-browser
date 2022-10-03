@@ -45,6 +45,7 @@ class Input : public widget::Widget {
             gawl::draw_outlines(screen, b.to_points(), {1, 1, 1, 1}, 2);
         }
     }
+
     auto keyboard(const xkb_keycode_t key, const Modifiers /*modifiers*/, xkb_state* const xkb_state) -> bool {
         const auto code = key - 8;
         switch(code) {

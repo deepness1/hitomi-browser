@@ -23,6 +23,7 @@ constexpr auto operator|(const Modifiers a, const Modifiers b) -> Modifiers {
 constexpr auto operator&(const Modifiers a, const Modifiers b) -> Modifiers {
     return static_cast<Modifiers>(static_cast<int>(a) & static_cast<int>(b));
 }
+
 struct Keybind {
     Modifiers modifiers;
     int       action;
@@ -58,6 +59,7 @@ class RegionStack {
         data.push(region);
         screen.set_viewport(region);
     }
+
     auto pop(gawl::concepts::Screen auto& screen) -> void {
         if(data.empty()) {
             screen.unset_viewport();

@@ -81,6 +81,7 @@ class DownloadManager {
         data.queue.emplace_back(std::move(parameter));
         worker_event.wakeup();
     }
+
     auto erase(const hitomi::GalleryID id) -> void {
         auto [lock, data] = critical_data.access();
 
@@ -102,6 +103,7 @@ class DownloadManager {
             infos.erase(p);
         }
     }
+
     auto find_info(const hitomi::GalleryID id) -> FindResult {
         auto  r    = FindResult{std::unique_lock(critical_data.get_raw_mutex()), nullptr, nullptr};
         auto& data = critical_data.assume_locked();
@@ -217,6 +219,7 @@ class DownloadManager {
             }
         });
     }
+
     ~DownloadManager() {
         worker_exit = true;
         worker_event.wakeup();

@@ -16,6 +16,7 @@ class TabsProvider {
         }
         return data.visit([](const auto& layout) { return layout.get_tab().get_name(); });
     }
+
     auto rename(Data& data) const -> bool {
         auto current = get_label(data);
         auto cursor  = current.size();
@@ -25,6 +26,7 @@ class TabsProvider {
               "tabname: ", std::move(current), cursor);
         return true;
     }
+
     auto get_background_color(const Data& data) const -> gawl::Color {
         switch(data.index()) {
         case Data::index_of<Layout<NormalTab>>():

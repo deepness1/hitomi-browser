@@ -16,6 +16,7 @@ namespace hitomi {
 namespace internal {
 constexpr auto ALT_TYPE = ".webp";
 }
+
 class Image {
   private:
     GalleryID id;
@@ -31,6 +32,7 @@ class Image {
         const auto hash_b = hash.substr(hash.size() - 3, 2);
         return fmt::format("btn.hitomi.la/webpbigtn/{}/{}/{}.webp", hash_a, hash_b, hash);
     }
+
     auto download(const char* const path, const bool alt) -> bool {
         const auto hash_a   = hash.back();
         const auto hash_b   = hash.substr(hash.size() - 3, 2);
@@ -46,7 +48,7 @@ class Image {
 
         const auto referer = fmt::format("https://hitomi.la/reader/{}.html", id);
         while(true) {
-            auto gg = internal::gg.load();
+            auto gg = internal::gg.access().second;
 
             const auto subdomain_a = static_cast<char>(97 + gg.get_subdomain(hash_str));
             const auto subdomain   = std::string{subdomain_a, 'a'};
@@ -60,12 +62,13 @@ class Image {
                 file.write(reinterpret_cast<const char*>(buffer->begin()), buffer->get_size_raw());
                 return true;
             }
-            const auto lock = internal::gg.get_lock();
-            if(internal::gg->version > gg.version) {
+
+            auto [lock, globgg] = internal::gg.access();
+            if(globgg.version > gg.version) {
                 continue;
             }
-            if(internal::gg->revisin == gg.revisin) {
-                if(internal::update_gg()) {
+            if(globgg.revision == gg.revision) {
+                if(globgg.update()) {
                     continue;
                 }
             }
@@ -76,6 +79,7 @@ class Image {
             return false;
         }
     }
+
     Image(const GalleryID id, const nlohmann::json& info)
         : id(id),
           hash(info["hash"].get<std::string>()),

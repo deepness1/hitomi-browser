@@ -23,6 +23,7 @@ class Message : public htk::widget::Widget {
     auto keyboard(const xkb_keycode_t key, const htk::Modifiers modifiers, xkb_state* const xkb_state) -> bool {
         return child.keyboard(key, modifiers, xkb_state);
     }
+
     auto refresh(gawl::concepts::Screen auto& screen) -> void {
         child.refresh(screen);
 
@@ -57,6 +58,7 @@ class Message : public htk::widget::Widget {
         });
         api.refresh_window();
     }
+
     auto get_child() -> T& {
         return child;
     }
@@ -64,6 +66,7 @@ class Message : public htk::widget::Widget {
     template <class... Args>
     Message(Args&&... args) : child(std::move(args)...),
                               font({htk::fc::find_fontpath_from_name(fontname).data()}, 20) {}
+
     ~Message() {
         if(timer.joinable()) {
             timer_event.wakeup();

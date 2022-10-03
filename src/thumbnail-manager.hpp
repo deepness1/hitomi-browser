@@ -51,6 +51,7 @@ class ThumbnailManager {
         data = std::move(filtered_data);
         workers_event.wakeup();
     }
+
     auto erase_cache(const hitomi::GalleryID id) -> bool {
         auto [lock, caches] = critical_caches.access();
         if(const auto p = caches.data.find(id); p == caches.data.end()) {
@@ -100,6 +101,7 @@ class ThumbnailManager {
             });
         }
     }
+
     ~ThumbnailManager() {
         workers_exit = true;
         workers_event.wakeup();

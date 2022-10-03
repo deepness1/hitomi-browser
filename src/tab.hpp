@@ -38,6 +38,7 @@ class TabProvider {
             }
         }
     }
+
     auto on_visible_range_change() -> void {
         visible_range_change_hook();
     }
@@ -239,9 +240,11 @@ class Tab : public htk::table::Table<Provider, hitomi::GalleryID> {
     auto set_name(std::string new_name) -> void {
         name = std::move(new_name);
     }
+
     auto get_name() const -> const std::string& {
         return name;
     }
+
     auto append(const hitomi::GalleryID id) -> void {
         auto& data = this->get_data();
         if(data.empty()) {
@@ -253,6 +256,7 @@ class Tab : public htk::table::Table<Provider, hitomi::GalleryID> {
         reset_order(this->get_data());
         search_and_set_index(current);
     }
+
     auto set_retrieve(std::vector<hitomi::GalleryID> ids) -> void {
         reset_order(ids);
         auto& data = this->get_data();
@@ -346,9 +350,11 @@ class SearchTab : public DownloadableTab {
     auto set_search_id(const size_t id) -> void {
         search_id = id;
     }
+
     auto get_search_id() const -> size_t {
         return search_id;
     }
+
     auto keyboard(const xkb_keycode_t key, const htk::Modifiers modifiers, xkb_state* const xkb_state) -> bool {
         if(key - 8 != KEY_F5) {
             return DownloadableTab::keyboard(key, modifiers, xkb_state);

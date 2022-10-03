@@ -29,9 +29,11 @@ constexpr auto* SEARCH_DOMAIN = "ltn.hitomi.la/{}.nozomi";
 inline auto fetch_by_category(const char* const category, const std::string_view value) -> Vector<GalleryID> {
     return fetch_ids(fmt::format(SEARCH_DOMAIN, fmt::format("{}/{}-all", category, value)).data());
 }
+
 inline auto fetch_by_type(const std::string_view type, const std::string_view lang) -> Vector<GalleryID> {
     return fetch_ids(fmt::format(SEARCH_DOMAIN, fmt::format("type/{}-{}", type, lang)).data());
 }
+
 inline auto fetch_by_tag(const std::string_view tag) -> Vector<GalleryID> {
     auto url = std::string();
     if(tag == "index") {
@@ -41,6 +43,7 @@ inline auto fetch_by_tag(const std::string_view tag) -> Vector<GalleryID> {
     }
     return fetch_ids(url.data());
 }
+
 inline auto fetch_by_language(const std::string_view lang) -> Vector<GalleryID> {
     return fetch_ids(fmt::format(SEARCH_DOMAIN, fmt::format("index-{}", lang)).data());
 }
@@ -80,6 +83,7 @@ class Node {
         }
         return cmp_result == 0;
     }
+
     auto is_leaf() const -> bool {
         for(auto a : subnode_addresses) {
             if(a != 0) {
@@ -88,12 +92,15 @@ class Node {
         }
         return true;
     }
+
     auto get_data(const uint64_t index) const -> const Range& {
         return datas[index];
     }
+
     auto get_subnode_address(uint64_t index) const -> uint64_t {
         return subnode_addresses[index];
     }
+
     Node(const Vector<uint8_t>& bytes) {
         auto arr = ByteReader(bytes.begin(), bytes.get_size_raw());
 
@@ -122,6 +129,7 @@ class Node {
 inline auto get_current_time() -> double {
     return std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
+
 inline auto get_index_version(const char* const index_name) -> uint64_t {
     const auto url    = fmt::format("ltn.hitomi.la/{}/version?_{}", index_name, static_cast<uint64_t>(get_current_time() * 1000));
     const auto buffer = download_binary(url.data(), {.referer = internal::REFERER});
@@ -130,6 +138,7 @@ inline auto get_index_version(const char* const index_name) -> uint64_t {
     }
     return std::stoi(reinterpret_cast<const char*>(buffer.value().begin()));
 }
+
 inline auto get_data_by_range(const char* const url, const Range& range) -> Vector<uint8_t> {
     const auto range_str = fmt::format("{}-{}", range[0], range[1]);
     auto       buffer    = download_binary(url, {.range = range_str.data(), .referer = internal::REFERER});
@@ -138,6 +147,7 @@ inline auto get_data_by_range(const char* const url, const Range& range) -> Vect
     }
     return buffer ? std::move(*buffer) : Vector<uint8_t>{};
 }
+
 inline auto get_node_at_address(const uint64_t address, const uint64_t index_version) -> Node {
     constexpr auto MAX_NODE_SIZE = 464;
 
@@ -145,6 +155,7 @@ inline auto get_node_at_address(const uint64_t address, const uint64_t index_ver
     const auto buffer = get_data_by_range(url.data(), {address, address + MAX_NODE_SIZE - 1});
     return Node(buffer);
 }
+
 inline auto search_for_key(const std::vector<uint8_t>& key, const Node& node, uint64_t index_version) -> Range {
     auto index = uint64_t();
     if(node.locate_key(key, index)) {
@@ -160,6 +171,7 @@ inline auto search_for_key(const std::vector<uint8_t>& key, const Node& node, ui
     const auto subnode = get_node_at_address(address, index_version);
     return search_for_key(key, subnode, index_version);
 }
+
 inline auto fetch_ids_with_range(const Range range, const uint64_t index_version) -> Vector<GalleryID> {
     const auto url    = fmt::format("ltn.hitomi.la/galleriesindex/galleries.{}.data", index_version);
     const auto buffer = get_data_by_range(url.data(), range);
@@ -178,6 +190,7 @@ inline auto fetch_ids_with_range(const Range range, const uint64_t index_version
     }
     return ids;
 }
+
 inline auto calc_sha256(const std::string_view string) -> std::vector<uint8_t> {
     auto digest  = std::vector<uint8_t>(SHA256_DIGEST_LENGTH);
     auto sha_ctx = SHA256_CTX();
@@ -186,6 +199,7 @@ inline auto calc_sha256(const std::string_view string) -> std::vector<uint8_t> {
     SHA256_Final(digest.data(), &sha_ctx);
     return digest;
 }
+
 inline auto search_by_keyword(const std::string_view keyword) -> Vector<GalleryID> {
     const auto hash    = calc_sha256(keyword);
     const auto key     = Key(hash.begin(), hash.begin() + 4);
@@ -201,6 +215,7 @@ inline auto search_by_keyword(const std::string_view keyword) -> Vector<GalleryI
     }
 }
 } // namespace internal
+
 inline auto search(const std::vector<std::string_view>& args) -> std::vector<GalleryID> {
     auto       init   = true;
     auto       r      = std::vector<GalleryID>();
@@ -257,6 +272,7 @@ inline auto search(const std::vector<std::string_view>& args) -> std::vector<Gal
     }
     return r;
 }
+
 inline auto search(const char* const args) -> std::vector<GalleryID> {
     struct Split {
         static auto split(const char* const str) -> std::vector<std::string_view> {

@@ -46,6 +46,7 @@ class Layout : public htk::widget::Widget {
         tab.refresh(screen);
         gallery_info.refresh(screen);
     }
+
     auto keyboard(const xkb_keycode_t key, const htk::Modifiers modifiers, xkb_state* const xkb_state) -> bool {
         if(modifiers != htk::Modifiers::None) {
             goto through;
@@ -82,6 +83,7 @@ class Layout : public htk::widget::Widget {
     auto get_tab() -> Tab& {
         return tab;
     }
+
     auto get_tab() const -> const Tab& {
         return tab;
     }

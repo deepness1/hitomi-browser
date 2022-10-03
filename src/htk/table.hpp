@@ -85,6 +85,7 @@ class Table : public widget::Widget {
         Widget::set_region(new_region);
         emit_visible_range_change();
     }
+
     auto refresh(gawl::concepts::Screen auto& screen) -> void {
         const auto& region        = this->get_region();
         const auto  region_handle = RegionHandle(screen, region);
@@ -122,6 +123,7 @@ class Table : public widget::Widget {
         gawl::draw_rect(screen, info_box, theme::background);
         font.draw_fit_rect(screen, info_box, {0.8, 0.8, 0.8, 1}, info_str.data());
     }
+
     auto keyboard(const xkb_keycode_t key, const Modifiers modifiers, xkb_state* const /*xkb_state*/) -> bool {
         if(const auto k = keybinds.find(key - 8); k != keybinds.end()) {
             for(const auto& b : k->second) {
@@ -139,16 +141,20 @@ class Table : public widget::Widget {
         index = new_index;
         emit_visible_range_change();
     }
+
     auto get_data() -> std::vector<T>& {
         return data;
     }
+
     auto set_index(const size_t new_index) -> void {
         index = new_index;
         emit_visible_range_change();
     }
+
     auto get_index() const -> size_t {
         return index;
     }
+
     auto calc_visible_range() const -> std::pair<size_t, size_t> {
         dynamic_assert(!data.empty());
 

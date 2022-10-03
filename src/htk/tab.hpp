@@ -85,6 +85,7 @@ class Tab : public widget::Widget {
         }
         return rect.width() + padding * 2;
     }
+
     auto do_action(const Actions action) -> bool {
         switch(action) {
         case Actions::Next:
@@ -136,6 +137,7 @@ class Tab : public widget::Widget {
             w.visit([&child_region](auto& w) { w.set_region(child_region); });
         }
     }
+
     auto refresh(gawl::concepts::Screen auto& screen) -> void {
         const auto& region        = this->get_region();
         const auto  tab_region    = gawl::Rectangle{region.a, {region.b.x, region.a.y + height + 1}};
@@ -170,6 +172,7 @@ class Tab : public widget::Widget {
 
         nth(data, index).visit([&screen](auto& widget) { widget.refresh(screen); });
     }
+
     auto keyboard(const xkb_keycode_t key, const Modifiers modifiers, xkb_state* const xkb_state) -> bool {
         if(const auto k = keybinds.find(key - 8); k != keybinds.end()) {
             for(const auto& b : k->second) {
@@ -195,6 +198,7 @@ class Tab : public widget::Widget {
         index = new_index;
         return data;
     }
+
     auto get_data() -> std::list<Variant<Ts...>>& {
         return data;
     }
@@ -220,6 +224,7 @@ class Tab : public widget::Widget {
     auto set_index(const size_t new_index) -> void {
         index = new_index;
     }
+
     auto get_index() const -> size_t {
         return index;
     }

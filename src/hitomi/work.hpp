@@ -25,36 +25,46 @@ class Work {
     auto get_id() const -> GalleryID {
         return id;
     }
+
     auto get_display_name() const -> const std::string& {
         return !japanese_title.empty() ? japanese_title : title;
     }
+
     auto get_thumbnail() -> std::optional<Vector<uint8_t>> {
         if(images.empty()) {
             return std::nullopt;
         }
         return internal::download_binary(images[0].get_thumbnail_url().data(), {.referer = internal::REFERER, .timeout = 15});
     }
+
     auto get_language() const -> const std::string& {
         return language;
     }
+
     auto get_pages() const -> uint64_t {
         return images.size();
     }
+
     auto get_date() const -> const std::string& {
         return date;
     }
+
     auto get_tags() const -> const std::vector<std::string>& {
         return tags;
     }
+
     auto get_artists() const -> const std::vector<std::string>& {
         return artists;
     }
+
     auto get_groups() const -> const std::vector<std::string>& {
         return groups;
     }
+
     auto get_type() const -> const std::string& {
         return type;
     }
+
     auto get_series() const -> const std::vector<std::string>& {
         return series;
     }
@@ -66,6 +76,7 @@ class Work {
         std::function<bool(uint64_t, bool)>          callback   = nullptr;
         std::optional<std::pair<uint64_t, uint64_t>> page_range = std::nullopt;
     };
+
     auto download(const DownloadParameters& parameters) -> const char* {
         if(!std::filesystem::exists(parameters.savedir) && !std::filesystem::create_directories(parameters.savedir)) {
             return "failed to create save directory";
@@ -110,6 +121,7 @@ class Work {
         }
         return error ? "unknown error" : nullptr;
     }
+
     Work(const GalleryID id) : id(id) {
         auto url    = fmt::format("ltn.hitomi.la/galleries/{}.js", id);
         auto buffer = internal::download_binary(url.data(), {.referer = internal::REFERER});

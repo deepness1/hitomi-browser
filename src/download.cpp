@@ -13,6 +13,7 @@ struct ArgParseResult {
     const char*                    save_dir = "downloads";
     std::vector<hitomi::GalleryID> ids;
 };
+
 auto parse_args(const int argc, const char* const argv[]) -> ArgParseResult {
     auto help = int(0), webp = int(0);
     auto result = ArgParseResult();
@@ -55,7 +56,8 @@ auto parse_args(const int argc, const char* const argv[]) -> ArgParseResult {
 
     return result;
 }
-constexpr const char* HELP =
+
+constexpr auto HELP =
     R"(Usage: hitomi-download [options] IDs ...
 Options:
     -h, --help          Print this help
@@ -77,12 +79,14 @@ auto replace_illeggal_chara(std::string const& str) -> std::string {
     }
     return ret;
 }
+
 auto build_save_dir(const hitomi::Work& w) -> std::string {
     const auto id_str = std::to_string(w.get_id());
     auto       dir    = replace_illeggal_chara(w.get_display_name()) + " " + id_str;
     return dir.size() < 256 ? dir : id_str;
 }
 } // namespace
+
 int main(const int argc, const char* const argv[]) {
     const auto args = parse_args(argc, argv);
     if(args.help) {

@@ -39,6 +39,7 @@ class Window {
             if(postlude) postlude();
         }
     }
+
     auto window_resize_callback() -> void {
         if(prelude) prelude();
 
@@ -47,6 +48,7 @@ class Window {
 
         if(postlude) postlude();
     }
+
     auto keysym_callback(const xkb_keycode_t key, const gawl::ButtonState state, xkb_state* const xkb_state) -> void {
         if(state != gawl::ButtonState::Press && state != gawl::ButtonState::Repeat) {
             return;
@@ -61,6 +63,7 @@ class Window {
             if(postlude) postlude();
         }
     }
+
     /*
     auto pointermove_callback(const gawl::Point& point) -> void {
     }
@@ -78,6 +81,7 @@ class Window {
     auto get_window() -> GawlWindow& {
         return window;
     }
+
     auto get_widget() -> RootWidget& {
         return root_widget;
     }
@@ -85,12 +89,14 @@ class Window {
         prelude  = new_prelude;
         postlude = new_postlude;
     }
+
     auto set_finalizer(std::function<void()> new_finalizer) -> void {
         finalizer = new_finalizer;
     }
 
     template <class... Args>
     Window(GawlWindow& window, Args&&... args) : window(window), root_widget(std::move(args)...) {}
+
     ~Window() {
         if(finalizer) {
             finalizer();

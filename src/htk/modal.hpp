@@ -81,12 +81,14 @@ class Modal : public widget::Widget {
             set_modal_region();
         }
     }
+
     auto refresh(gawl::concepts::Screen auto& screen) -> void {
         child.refresh(screen);
         if(modal) {
             modal->refresh(screen);
         }
     }
+
     auto keyboard(const xkb_keycode_t key, const Modifiers modifiers, xkb_state* const xkb_state) -> bool {
         if(modal) {
             if constexpr(widget::WidgetKeyboard<M>) {
@@ -103,10 +105,12 @@ class Modal : public widget::Widget {
     auto get_child() -> T& {
         return child;
     }
+
     auto get_modal() -> M& {
         dynamic_assert(modal, "modal widget not opened");
         return *modal;
     }
+
     template <class... Args>
     auto open_modal(Args&&... args) -> M& {
         if(!modal) {
@@ -115,6 +119,7 @@ class Modal : public widget::Widget {
         }
         return *modal;
     }
+
     auto close_modal() -> void {
         modal.reset();
     }

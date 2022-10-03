@@ -46,6 +46,7 @@ class SearchManager {
             }
         });
     }
+
     ~SearchManager() {
         worker_exit = true;
         worker_event.wakeup();
