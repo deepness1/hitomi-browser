@@ -9,7 +9,7 @@ class InputProvider {
 
   public:
     auto done(std::string& buffer, const bool canceled) -> bool {
-        if(!canceled) {
+        if(!buffer.empty() && !canceled) {
             handler(buffer);
         }
         close_modal();
