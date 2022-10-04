@@ -220,6 +220,7 @@ class Tab : public htk::table::Table<Provider, hitomi::GalleryID> {
                 }
                 if(new_index < 0 || static_cast<size_t>(new_index) >= this->get_data().size()) {
                     api.show_message("invalid position");
+                    return;
                 }
                 this->set_index(new_index);
             },
