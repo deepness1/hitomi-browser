@@ -199,17 +199,18 @@ class Tab : public htk::table::Table<Provider, hitomi::GalleryID> {
             api.input([this](std::string& buffer) {
                 auto input_buffer = &buffer[0];
                 auto direction    = int(0);
+                auto new_index    = int(0);
                 if(input_buffer[0] == '+') {
-                    direction = 1;
-                } else if(input_buffer[0] == '-') {
-                    direction = -1;
-                }
-                if(direction != 0) {
+                    direction    = 1;
                     input_buffer = &input_buffer[1];
+                } else if(input_buffer[0] == '-') {
+                    direction    = -1;
+                    input_buffer = &input_buffer[1];
+                } else {
+                    new_index = -1;
                 }
-                auto new_index = int();
                 try {
-                    new_index = std::stoi(input_buffer) - 1;
+                    new_index += std::stoi(input_buffer);
                 } catch(const std::invalid_argument&) {
                     return;
                 }
