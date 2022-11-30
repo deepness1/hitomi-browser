@@ -272,7 +272,7 @@ class Tab : public htk::table::Table<Provider, hitomi::GalleryID> {
     }
 
     template <class... Args>
-    Tab(std::string name, ThumbnailManager* const manager, Args&&... args) : htk::table::Table<Provider, hitomi::GalleryID>({{fontname, emoji_fontname}, 20}, 32, manager, std::move(args)...),
+    Tab(std::string name, ThumbnailManager* const manager, Args&&... args) : htk::table::Table<Provider, hitomi::GalleryID>(htk::Font::from_fonts(std::array{fontname, emoji_fontname}, 20), 32, manager, std::forward<Args>(args)...),
                                                                              name(std::move(name)),
                                                                              manager(*manager) {}
 };

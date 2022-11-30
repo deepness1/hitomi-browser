@@ -7,7 +7,7 @@
 #include "util/error.hpp"
 #include "util/thread.hpp"
 
-constexpr auto fontname = "Noto Sans CJK JP:style=Bold";
+constexpr auto fontname       = "Noto Sans CJK JP:style=Bold";
 constexpr auto emoji_fontname = "/home/mojyack/documents/fonts/seguiemj.ttf";
 
 using InputHander = std::function<void(std::string&)>;
@@ -20,13 +20,18 @@ enum class TabType : uint64_t {
 };
 
 struct ThumbnailedWork {
-    hitomi::Work  work;
-    gawl::Graphic thumbnail;
+    hitomi::Work                 work;
+    std::optional<gawl::Graphic> thumbnail;
 
     ThumbnailedWork(const hitomi::GalleryID id) : work(id) {
         const auto buf = work.get_thumbnail();
         if(buf.has_value()) {
-            thumbnail = gawl::Graphic(gawl::PixelBuffer(buf->begin(), buf->get_size_raw()));
+            const auto pixelbuffer = gawl::PixelBuffer::from_blob(buf->begin(), buf->get_size_raw());
+            if(pixelbuffer) {
+                thumbnail = gawl::Graphic(pixelbuffer.as_value());
+            } else {
+                warn("downloaded thumbnail is corrupted for ", id);
+            }
         } else {
             warn("failed to download thumbnail for ", id);
         }

@@ -77,7 +77,7 @@ class Tab : public widget::Widget {
         } else {
             gawl::draw_rect(screen, box, theme::tab_color);
         }
-        font.draw_fit_rect(screen, box, {1, 1, 1, 1}, label.data());
+        font.draw_fit_rect(screen, box, {1, 1, 1, 1}, label);
         if(index == this->index) {
             auto b = box;
             b.expand(-2, -2);
@@ -205,14 +205,14 @@ class Tab : public widget::Widget {
 
     template <class... Args>
     auto insert(const size_t index, Args&&... args) -> Variant<Ts...>& {
-        auto& t = *data.emplace(std::next(data.begin(), index), std::move(args)...);
+        auto& t = *data.emplace(std::next(data.begin(), index), std::forward<Args>(args)...);
         t.visit([this](auto& w) { w.set_region(calc_child_region()); });
         return t;
     }
 
     template <class... Args>
     auto insert_last(Args&&... args) -> Variant<Ts...>& {
-        auto& t = *data.emplace_back(std::move(args)...);
+        auto& t = *data.emplace_back(std::forward<Args>(args)...);
         t.visit([this](auto& w) { w.set_region(calc_child_region()); });
         return t;
     }
@@ -230,7 +230,7 @@ class Tab : public widget::Widget {
     }
 
     template <class... Args>
-    Tab(const Font font, const double tab_height, const double padding, const double spacing, Args&&... args) : provider(std::move(args)...),
+    Tab(const Font font, const double tab_height, const double padding, const double spacing, Args&&... args) : provider(std::forward<Args>(args)...),
                                                                                                                 font(font.to_textrender()),
                                                                                                                 height(tab_height),
                                                                                                                 padding(padding),

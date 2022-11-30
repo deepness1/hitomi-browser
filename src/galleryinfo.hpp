@@ -36,14 +36,15 @@ class GalleryInfo : public htk::widget::Widget {
         if(info.thumbnail) {
             constexpr auto thumbnail_limit_rate = 0.65;
 
-            auto fit_area = gawl::calc_fit_rect(region, info.thumbnail.get_width(screen), info.thumbnail.get_height(screen), layout_type == 0 ? gawl::Align::Center : gawl::Align::Left, layout_type == 0 ? gawl::Align::Left : gawl::Align::Center);
+            auto& thumbnail = info.thumbnail.value();
+            auto  fit_area  = gawl::calc_fit_rect(region, thumbnail.get_width(screen), thumbnail.get_height(screen), layout_type == 0 ? gawl::Align::Center : gawl::Align::Left, layout_type == 0 ? gawl::Align::Left : gawl::Align::Center);
             if((layout_type == 0 ? fit_area.b.y : fit_area.b.x) > thumbnail_limit_rate * (layout_type == 0 ? region.height() : region.width())) {
                 fit_area.a   = region.a;
                 fit_area.b.x = layout_type == 0 ? region.b.x : fit_area.a.x + region.width() * thumbnail_limit_rate;
                 fit_area.b.y = layout_type == 0 ? fit_area.a.y + region.height() * thumbnail_limit_rate : region.b.y;
-                fit_area     = gawl::calc_fit_rect(fit_area, info.thumbnail.get_width(screen), info.thumbnail.get_height(screen));
+                fit_area     = gawl::calc_fit_rect(fit_area, info.thumbnail->get_width(screen), info.thumbnail->get_height(screen));
             }
-            info.thumbnail.draw_rect(screen, fit_area);
+            thumbnail.draw_rect(screen, fit_area);
             thumbnail_bottom = layout_type == 0 ? fit_area.b.y : fit_area.b.x;
         }
 
@@ -61,6 +62,7 @@ class GalleryInfo : public htk::widget::Widget {
             return ret;
         };
         auto info_str = std::stringstream();
+        auto info_wrapped_str = gawl::WrappedText();
         {
             const auto t = info.work.get_date();
             info_str << t.substr(0, 10) << fmt::format(" ({} pages)", info.work.get_pages());
@@ -90,7 +92,7 @@ class GalleryInfo : public htk::widget::Widget {
 
         auto info_area = gawl::Rectangle{{layout_type == 0 ? region.a.x : thumbnail_bottom, layout_type == 0 ? thumbnail_bottom : region.a.y}, region.b};
 
-        font.draw_wrapped(screen, info_area, 24, {1, 1, 1, 1}, info_str.str().data(), 0, gawl::Align::Left, gawl::Align::Left);
+        font.draw_wrapped(screen, info_area, 24, {1, 1, 1, 1}, info_str.str(), info_wrapped_str, 0, gawl::Align::Left, gawl::Align::Left);
     }
 
     auto set_id(const hitomi::GalleryID new_id) -> void {

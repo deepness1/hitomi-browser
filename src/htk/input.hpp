@@ -6,8 +6,8 @@
 namespace htk::input {
 template <class P>
 concept InputProvider = requires(P& m, std::string& buffer, bool canceled) {
-    { m.done(buffer, canceled) } -> std::same_as<bool>;
-};
+                            { m.done(buffer, canceled) } -> std::same_as<bool>;
+                        };
 
 template <InputProvider Provider>
 class Input : public widget::Widget {
@@ -27,7 +27,7 @@ class Input : public widget::Widget {
 
         const auto text       = prompt + buffer;
         const auto input_area = gawl::Rectangle{{region.a.x + 5, region.a.y}, {region.b.x - 5, region.b.y}};
-        font.draw_fit_rect(screen, input_area, {0.8, 0.8, 0.8, 1.0}, text.data(), 0, gawl::Align::Left, gawl::Align::Center, [&](const size_t index, const gawl::Rectangle& rect, gawl::TextRenderCharacterGraphic& /* graphic */) -> bool {
+        font.draw_fit_rect(screen, input_area, {0.8, 0.8, 0.8, 1.0}, text, 0, gawl::Align::Left, gawl::Align::Center, [&](const size_t index, const gawl::Rectangle& rect, gawl::TextRenderCharacterGraphic& /* graphic */) -> bool {
             if(index == prompt.size()) {
                 font.set_char_color({1, 1, 1, 1});
             }
@@ -112,8 +112,8 @@ class Input : public widget::Widget {
 
     template <class... Args>
     Input(std::string prompt, const Font font, Args... args) : prompt(std::move(prompt)),
-                                                               provider(std::move(args)...),
+                                                               provider(std::forward<Args>(args)...),
                                                                font(font.to_textrender()),
-                                                               font_size(font.size) {}
+                                                               font_size(font.get_size()) {}
 };
 } // namespace htk::input

@@ -89,7 +89,7 @@ class Layout : public htk::widget::Widget {
     }
 
     template <class... Args>
-    Layout(LayoutConfig* const config, ThumbnailManager* const manager, std::function<void()>* const on_visible_range_change, Args&&... args) : tab(std::move(args)..., manager, on_visible_range_change),
+    Layout(LayoutConfig* const config, ThumbnailManager* const manager, std::function<void()>* const on_visible_range_change, Args&&... args) : tab(std::forward<Args>(args)..., manager, on_visible_range_change),
                                                                                                                                                 gallery_info(config->layout_type, *manager),
                                                                                                                                                 config(*config) {}
 };

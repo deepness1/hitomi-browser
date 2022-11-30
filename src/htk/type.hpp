@@ -31,22 +31,36 @@ struct Keybind {
 
 using Keybinds = std::unordered_map<uint32_t, std::vector<Keybind>>;
 
-struct Font {
+class Font {
+  private:
     // each name is treated as a raw path if it starts with '/'.
     // else font name.
-    std::vector<const char*> names;
+    std::vector<std::string> names;
     int                      size;
 
-    auto to_textrender() const -> gawl::TextRender {
-        auto n   = names;
-        auto buf = std::vector<std::string>();
-        for(auto& name : n) {
-            if(name[0] == '/') {
-                continue;
+    Font(std::vector<std::string> names, const int size) : names(std::move(names)), size(size) {}
+
+  public:
+    template <size_t n>
+    static auto from_fonts(const std::array<const char*, n> fonts, const int size) -> Font {
+        auto names = std::vector<std::string>();
+        names.reserve(n);
+        for(const auto font : fonts) {
+            if(font[0] == '/') {
+                names.emplace_back(font);
+            } else {
+                names.emplace_back(fc::find_fontpath_from_name(font));
             }
-            name = buf.emplace_back(fc::find_fontpath_from_name(name)).data();
         }
-        return gawl::TextRender(n, size);
+        return Font{std::move(names), size};
+    }
+
+    auto get_size() const -> int {
+        return size;
+    }
+
+    auto to_textrender() const -> gawl::TextRender {
+        return gawl::TextRender(names, size);
     }
 };
 
@@ -83,6 +97,7 @@ class RegionHandle {
     RegionHandle(Screen& screen, const gawl::Rectangle& region) : screen(screen) {
         region_stack.push(screen, region);
     }
+
     ~RegionHandle() {
         region_stack.pop(screen);
     }

@@ -101,7 +101,7 @@ class Table : public widget::Widget {
             const auto y    = center + diff * row_height;
             const auto box  = gawl::Rectangle{{region.a.x, y}, {region.b.x, y + row_height}};
             gawl::draw_rect(screen, box, theme::table_color[i % 2]);
-            font.draw_fit_rect(screen, box, {1, 1, 1, 1}, provider.get_label(data[i]).data());
+            font.draw_fit_rect(screen, box, {1, 1, 1, 1}, provider.get_label(data[i]));
 
             if constexpr(TableProviderOptoinalDecorate<Provider, std::remove_reference_t<decltype(screen)>, T>) {
                 auto b2 = box;
@@ -121,7 +121,7 @@ class Table : public widget::Widget {
         const auto info_rect = font.get_rect(screen, info_str.data());
         const auto info_box  = gawl::Rectangle{{region.b.x - info_rect.width(), region.b.y - info_rect.height()}, region.b};
         gawl::draw_rect(screen, info_box, theme::background);
-        font.draw_fit_rect(screen, info_box, {0.8, 0.8, 0.8, 1}, info_str.data());
+        font.draw_fit_rect(screen, info_box, {0.8, 0.8, 0.8, 1}, info_str);
     }
 
     auto keyboard(const xkb_keycode_t key, const Modifiers modifiers, xkb_state* const /*xkb_state*/) -> bool {
@@ -170,7 +170,7 @@ class Table : public widget::Widget {
     }
 
     template <class... Args>
-    Table(const Font font, const double row_height, Args&&... args) : provider(std::move(args)...),
+    Table(const Font font, const double row_height, Args&&... args) : provider(std::forward<Args>(args)...),
                                                                       font(font.to_textrender()),
                                                                       row_height(row_height) {}
 };

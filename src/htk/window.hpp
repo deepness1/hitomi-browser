@@ -95,7 +95,7 @@ class Window {
     }
 
     template <class... Args>
-    Window(GawlWindow& window, Args&&... args) : window(window), root_widget(std::move(args)...) {}
+    Window(GawlWindow& window, Args&&... args) : window(window), root_widget(std::forward<Args>(args)...) {}
 
     ~Window() {
         if(finalizer) {

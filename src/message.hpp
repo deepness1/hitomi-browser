@@ -37,7 +37,7 @@ class Message : public htk::widget::Widget {
             gawl::draw_rect(screen, box, htk::theme::background);
             gawl::draw_outlines(screen, std::array{gawl::Point{region.a.x, base + 2}, gawl::Point{region.b.x, base + 2}}, {1, 1, 1, 1}, 2);
             gawl::draw_outlines(screen, std::array{gawl::Point{region.a.x, base + height - 2}, gawl::Point{region.b.x, base + height - 2}}, {1, 1, 1, 1}, 2);
-            font.draw_fit_rect(screen, box, {1, 1, 1, 1}, message.data());
+            font.draw_fit_rect(screen, box, {1, 1, 1, 1}, message);
         }
     }
 
@@ -64,7 +64,7 @@ class Message : public htk::widget::Widget {
     }
 
     template <class... Args>
-    Message(Args&&... args) : child(std::move(args)...),
+    Message(Args&&... args) : child(std::forward<Args>(args)...),
                               font({htk::fc::find_fontpath_from_name(fontname).data()}, 20) {}
 
     ~Message() {

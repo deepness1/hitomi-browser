@@ -114,7 +114,7 @@ class Modal : public widget::Widget {
     template <class... Args>
     auto open_modal(Args&&... args) -> M& {
         if(!modal) {
-            modal.emplace(std::move(args)...);
+            modal.emplace(std::forward<Args>(args)...);
             set_modal_region();
         }
         return *modal;
@@ -125,7 +125,7 @@ class Modal : public widget::Widget {
     }
 
     template <class... Args>
-    Modal(std::array<RegionPolicy, 2>&& region_policy, Args&&... args) : child(std::move(args)...),
-                                                                         region_policy(std::move(region_policy)) {}
+    Modal(std::array<RegionPolicy, 2> region_policy, Args&&... args) : child(std::forward<Args>(args)...),
+                                                                       region_policy(std::move(region_policy)) {}
 };
 } // namespace htk::modal
