@@ -68,25 +68,25 @@ class GalleryInfo : public htk::widget::Widget {
             info_str << t.substr(0, 10) << fmt::format(" ({} pages)", info.work.get_pages());
         }
         if(const auto i = make_display_info(info.work.get_artists(), "artists: "); !i.empty()) {
-            info_str << "\\n"
+            info_str << "\n"
                      << i;
         }
         if(const auto& language = info.work.get_language(); !language.empty()) {
-            info_str << "\\nlanguage: " << language;
+            info_str << "\nlanguage: " << language;
         }
         if(const auto i = make_display_info(info.work.get_groups(), "groups: "); !i.empty()) {
-            info_str << "\\n"
+            info_str << "\n"
                      << i;
         }
         if(const auto& type = info.work.get_type(); !type.empty()) {
-            info_str << "\\ntype: " << type;
+            info_str << "\ntype: " << type;
         }
         if(const auto i = make_display_info(info.work.get_series(), "series: "); !i.empty()) {
-            info_str << "\\n"
+            info_str << "\n"
                      << i;
         }
         if(const auto i = make_display_info(info.work.get_tags(), "tags: "); !i.empty()) {
-            info_str << "\\n"
+            info_str << "\n"
                      << i;
         }
 
