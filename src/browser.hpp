@@ -1,6 +1,6 @@
 #pragma once
-#include "download-manager.hpp"
 #include "global.hpp"
+#include "imgview.hpp"
 #include "input.hpp"
 #include "layout.hpp"
 #include "message.hpp"
@@ -10,25 +10,28 @@
 
 class Browser {
   private:
-    using Tabs    = htk::tab::Tab<TabsProvider, Layout<NormalTab>, Layout<SearchTab>, Layout<ReadingTab>>;
+    using Tabs    = htk::tab::Tab<TabsProvider, Layout<NormalTab>, Layout<SearchTab>>;
     using Input   = htk::input::Input<InputProvider>;
     using Modal   = htk::modal::Modal<Tabs, Input>;
     using Message = Message<Modal>;
-    using Window  = htk::window::Window<Message>;
+
+    using Imgview = imgview::Imgview<Message>;
+    using Window  = htk::window::Window<Message, Imgview>;
 
   public:
     auto run() -> void {
         auto savedata = load_savedata();
 
-        auto  app         = Window::Application();
-        auto& window      = app.open_window<Window>({.title = "hitomi-browser", .manual_refresh = true},
+        auto  app    = Window::Application();
+        auto& window = app.open_window<Window>({.title = "hitomi-browser", .manual_refresh = true},
                                                // Message
                                                // (none)
                                                // Modal
                                                std::array<Modal::RegionPolicy, 2>{{{{Modal::SizePolicy::Relative, 1}, {0.5, 0.5}}, {{Modal::SizePolicy::Fixed, 48}, {0.5, 0.5}}}},
                                                // Tab
                                                htk::Font::from_fonts(std::array{fontname}, 32), 40, 5, 10);
-        auto  window_lock = std::mutex();
+
+        auto window_lock = std::mutex();
         window.set_locker([&window_lock]() { window_lock.lock(); }, [&window_lock]() { window_lock.unlock(); });
 
         auto& message = window.get_widget();
@@ -56,9 +59,7 @@ class Browser {
             input.set_buffer(std::move(buffer), cursor);
         };
 
-        auto download          = std::function<void(DownloadParameter)>();
         auto thumbnail_manager = ThumbnailManager(window.get_window());
-        auto download_manager  = DownloadManager("/tmp/hitomi-browser");
         auto search_manager    = SearchManager([&tabs, &window_lock](const size_t id) {
             const auto lock = std::lock_guard(window_lock);
             for(auto& t : tabs.get_data()) {
@@ -106,7 +107,7 @@ class Browser {
             thumbnail_manager.set_visible_galleries(std::move(visible));
         });
 
-        const auto apply_tab_keybinds = [](htk::Variant<Layout<NormalTab>, Layout<SearchTab>, Layout<ReadingTab>>& layout) {
+        const auto apply_tab_keybinds = [](htk::Variant<Layout<NormalTab>, Layout<SearchTab>>& layout) {
             layout.visit([&layout](auto& l) {
                 auto& keybinds = l.get_tab().get_keybinds();
 
@@ -118,39 +119,29 @@ class Browser {
             });
         };
 
-        const auto open_normal_tab = [&tabs, &savedata, &thumbnail_manager, &on_visible_range_change, &download, apply_tab_keybinds](std::string title, const size_t pos) -> decltype(auto) {
+        const auto open_normal_tab = [&tabs, &savedata, &thumbnail_manager, &on_visible_range_change, apply_tab_keybinds](std::string title, const size_t pos) -> decltype(auto) {
             auto& l = tabs.insert(pos, std::in_place_type<Layout<NormalTab>>,
                                   // Layout
                                   &savedata.layout_config, &thumbnail_manager, &on_visible_range_change,
                                   // NormalTab
-                                  std::move(title), &download);
+                                  std::move(title));
             apply_tab_keybinds(l);
             return l;
         };
 
-        const auto open_search_tab = [&tabs, &savedata, &thumbnail_manager, &on_visible_range_change, &download, &search_manager, apply_tab_keybinds](std::string title, const size_t pos) -> decltype(auto) {
+        const auto open_search_tab = [&tabs, &savedata, &thumbnail_manager, &on_visible_range_change, &search_manager, apply_tab_keybinds](std::string title, const size_t pos) -> decltype(auto) {
             auto& l = tabs.insert(pos, std::in_place_type<Layout<SearchTab>>,
                                   // Layout
                                   &savedata.layout_config, &thumbnail_manager, &on_visible_range_change,
                                   // SearchTab
-                                  std::move(title), &download, &search_manager);
-            apply_tab_keybinds(l);
-            return l;
-        };
-
-        const auto open_reading_tab = [&tabs, &savedata, &thumbnail_manager, &on_visible_range_change, &download_manager, apply_tab_keybinds](std::string title, const size_t pos) -> decltype(auto) {
-            auto& l = tabs.insert(pos, std::in_place_type<Layout<ReadingTab>>,
-                                  // Layout
-                                  &savedata.layout_config, &thumbnail_manager, &on_visible_range_change,
-                                  // ReadingTab
-                                  std::move(title), &download_manager);
+                                  std::move(title), &search_manager);
             apply_tab_keybinds(l);
             return l;
         };
 
         if(!savedata.tabs.empty()) {
             for(auto& t : savedata.tabs) {
-                auto layout = (htk::Variant<Layout<NormalTab>, Layout<SearchTab>, Layout<ReadingTab>>*)(nullptr);
+                auto layout = (htk::Variant<Layout<NormalTab>, Layout<SearchTab>>*)(nullptr);
                 switch(t.type) {
                 case TabType::Normal:
                     layout = &open_normal_tab(std::move(t.title), tabs.get_data().size());
@@ -158,15 +149,6 @@ class Browser {
                 case TabType::Search:
                     layout = &open_search_tab(std::move(t.title), tabs.get_data().size());
                     break;
-                case TabType::Reading:
-                    layout = &open_reading_tab(std::move(t.title), tabs.get_data().size());
-                    break;
-                }
-
-                if(t.type == TabType::Reading) {
-                    for(const auto i : t.data) {
-                        download_manager.add_queue({i});
-                    }
                 }
 
                 if(!t.data.empty()) {
@@ -179,26 +161,9 @@ class Browser {
             savedata.tabs.clear();
             tabs.set_index(savedata.tabs_index);
         } else {
-            open_reading_tab(std::move("reading"), 0);
+            open_normal_tab("tab", 0);
             tabs.set_index(0);
         }
-
-        download = [&tabs, open_reading_tab, &download_manager](DownloadParameter parameter) {
-            auto tab = (ReadingTab*)(nullptr);
-            for(auto& t : tabs.get_data()) {
-                if(t.index() != t.index_of<Layout<ReadingTab>>()) {
-                    continue;
-                }
-                tab = &t.get<Layout<ReadingTab>>().get_tab();
-                break;
-            }
-            if(tab == nullptr) {
-                tab = &open_reading_tab("reading", tabs.get_index() + 1).get<Layout<ReadingTab>>().get_tab();
-            }
-            tab->append(parameter.id);
-            download_manager.add_queue(std::move(parameter));
-            api.show_message("added to queue");
-        };
 
         auto last_bookmark = std::string();
         api.last_bookmark  = &last_bookmark;
@@ -228,6 +193,10 @@ class Browser {
             tab.set_search_id(search_manager.search(std::move(args)));
         };
 
+        api.open_viewer = [&app](hitomi::Work work) {
+            app.open_window<Imgview>({.title = work.get_display_name().data(), .manual_refresh = true}, std::move(work));
+        };
+
         window.set_finalizer([&tabs, &savedata]() {
             for(auto& layout : tabs.get_data()) {
                 auto tabdata = TabData();
@@ -245,9 +214,6 @@ class Browser {
                     break;
                 case L::index_of<Layout<SearchTab>>():
                     tabdata.type = TabType::Search;
-                    break;
-                case L::index_of<Layout<ReadingTab>>():
-                    tabdata.type = TabType::Reading;
                     break;
                 }
                 savedata.tabs.emplace_back(std::move(tabdata));

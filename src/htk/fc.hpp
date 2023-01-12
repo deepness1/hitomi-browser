@@ -3,27 +3,10 @@
 
 #include <string>
 
+#include "util.hpp"
+
 namespace htk::fc {
-inline auto list_fonts() -> void {
-    if(!FcInit()) {
-        return;
-    }
-    const auto config = FcConfigGetCurrent();
-    FcConfigSetRescanInterval(config, 0);
-
-    const auto pattern = FcPatternCreate();
-    const auto objects = FcObjectSetBuild(FC_FAMILY, FC_STYLE, FC_FILE, nullptr);
-    const auto fonts   = FcFontList(config, pattern, objects);
-    for(auto i = 0; i < fonts->nfont; i += 1) {
-        const auto font = fonts->fonts[i];
-        const auto name = std::unique_ptr<FcChar8>(FcNameUnparse(font));
-        printf("%s\n", name.get());
-    }
-    FcFontSetDestroy(fonts);
-    FcFini();
-}
-
-inline auto find_fontpath_from_name(const char* const name) -> std::string {
+inline auto find_fontpath_from_name(const char* const name) -> Result<std::string> {
     const auto config  = FcInitLoadConfigAndFonts();
     const auto pattern = FcNameParse((const FcChar8*)(name));
     FcConfigSubstitute(config, pattern, FcMatchPattern);
@@ -31,7 +14,7 @@ inline auto find_fontpath_from_name(const char* const name) -> std::string {
 
     auto       result = FcResult();
     const auto font   = FcFontMatch(config, pattern, &result);
-    auto       path   = std::string();
+    auto       path   = Result<std::string>(Error("failed to find font"));
     if(font) {
         auto file = (FcChar8*)(nullptr);
         if(FcPatternGetString(font, FC_FILE, 0, &file) == FcResultMatch) {

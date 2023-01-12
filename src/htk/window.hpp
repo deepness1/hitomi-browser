@@ -2,13 +2,14 @@
 #include <gawl/wayland/gawl.hpp>
 
 #include "widget.hpp"
+#include "window-decl.hpp"
 
 namespace htk::window {
-template <class RootWidget>
+template <class RootWidget, class... OtherWindows>
 class Window {
   private:
-    using Gawl       = gawl::Gawl<Window>;
-    using GawlWindow = typename Gawl::template Window<Window<RootWidget>>;
+    using Gawl       = GawlTemplate<RootWidget, OtherWindows...>;
+    using GawlWindow = typename Gawl::template Window<Window>;
 
     GawlWindow& window;
     RootWidget  root_widget;

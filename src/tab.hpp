@@ -1,5 +1,4 @@
 #pragma once
-#include "download-manager.hpp"
 #include "hitomi/hitomi.hpp"
 #include "htk/htk.hpp"
 #include "search-manager.hpp"
@@ -47,59 +46,28 @@ class TabProvider {
                                                                                                            visible_range_change_hook(*visible_range_change_hook) {}
 };
 
-class ReadingTabProvider : public TabProvider {
-  private:
-    DownloadManager& download_manager;
-
-  public:
-    auto on_erase(const hitomi::GalleryID data) -> void {
-        download_manager.erase(data);
-    }
-
-    auto decorate(gawl::concepts::Screen auto& screen, const hitomi::GalleryID id, const gawl::Rectangle box) -> void {
-        const auto r = download_manager.find_info(id);
-        if(r.info == nullptr) {
-            return;
-        }
-
-        constexpr auto color_all_done   = gawl::Color{0, 1, 1, 1};
-        constexpr auto color_page_done  = gawl::Color{1, 1, 0, 1};
-        constexpr auto color_page_error = gawl::Color{1, 0, 0, 1};
-
-        const auto& status = r.info->status;
-        const auto  y      = box.b.y - 3;
-        if(std::all_of(status.begin(), status.end(), [](const PageState s) { return s == PageState::Done; })) {
-            gawl::draw_rect(screen, {{box.a.x, y}, {box.b.x, y + 3}}, color_all_done);
-        } else {
-            const auto dotw = box.width() / status.size();
-            auto       dot  = gawl::Rectangle{{box.a.x, y}, {box.a.x + dotw, y + 3}};
-            for(const auto s : status) {
-                switch(s) {
-                case PageState::None:
-                    break;
-                case PageState::Done:
-                    gawl::draw_rect(screen, dot, color_page_done);
-                    break;
-                case PageState::Error:
-                    gawl::draw_rect(screen, dot, color_page_error);
-                    break;
-                }
-                dot.a.x += dotw;
-                dot.b.x += dotw;
-            }
-        }
-    }
-
-    ReadingTabProvider(ThumbnailManager* const thumbnail_manager, std::function<void()>* const visible_range_change_hook, DownloadManager* const download_manager) : TabProvider(thumbnail_manager, visible_range_change_hook),
-                                                                                                                                                                     download_manager(*download_manager) {}
-};
-
 template <class Provider>
 class Tab : public htk::table::Table<Provider, hitomi::GalleryID> {
   private:
     std::string       name;
     ThumbnailManager& manager;
 
+    auto reset_order(std::vector<hitomi::GalleryID>& data) -> void {
+        std::sort(data.begin(), data.end(), std::greater<hitomi::GalleryID>());
+        data.erase(std::unique(data.begin(), data.end()), data.end());
+    }
+
+    auto search_and_set_index(const hitomi::GalleryID i) -> bool {
+        auto&      data = this->get_data();
+        const auto p    = std::find(data.begin(), data.end(), i);
+        if(p != data.end()) {
+            this->set_index(std::distance(data.begin(), p));
+            return true;
+        }
+        return false;
+    }
+
+  protected:
     auto find_current_id() -> std::optional<hitomi::GalleryID> {
         auto& self_data = this->get_data();
         if(self_data.empty()) {
@@ -131,21 +99,6 @@ class Tab : public htk::table::Table<Provider, hitomi::GalleryID> {
             return nullptr;
         }
         return &type.template get<ThumbnailedWork>().work;
-    }
-
-    auto reset_order(std::vector<hitomi::GalleryID>& data) -> void {
-        std::sort(data.begin(), data.end(), std::greater<hitomi::GalleryID>());
-        data.erase(std::unique(data.begin(), data.end()), data.end());
-    }
-
-    auto search_and_set_index(const hitomi::GalleryID i) -> bool {
-        auto&      data = this->get_data();
-        const auto p    = std::find(data.begin(), data.end(), i);
-        if(p != data.end()) {
-            this->set_index(std::distance(data.begin(), p));
-            return true;
-        }
-        return false;
     }
 
   public:
@@ -278,9 +231,6 @@ class Tab : public htk::table::Table<Provider, hitomi::GalleryID> {
 };
 
 class DownloadableTab : public Tab<TabProvider> {
-  private:
-    std::function<void(DownloadParameter)>& download;
-
   public:
     auto keyboard(const xkb_keycode_t key, const htk::Modifiers modifiers, xkb_state* const xkb_state) -> bool {
         if(key - 8 != KEY_BACKSLASH) {
@@ -291,27 +241,11 @@ class DownloadableTab : public Tab<TabProvider> {
             goto through;
         }
 
-        if(modifiers == htk::Modifiers::Shift) {
-            api.input([this](std::string& buffer) {
-                auto info = DownloadParameter({get_data()[get_index()], {}});
-                try {
-                    const auto sep = buffer.find(':');
-                    if(sep != std::string::npos) {
-                        info.range.emplace(std::stoull(buffer.substr(0, sep)), std::stoull(buffer.substr(sep + 1)));
-                    } else {
-                        info.range.emplace(0, std::stoull(buffer));
-                    }
-                    if(info.range->first >= info.range->second) {
-                        throw std::range_error("invalid page range");
-                    }
-                } catch(const std::runtime_error& e) {
-                    api.show_message(e.what());
-                }
-                download(std::move(info));
-            },
-                      "range: ", "", 0);
+        if(const auto work = find_current_work(); work == nullptr) {
+            goto through;
         } else {
-            download({get_data()[get_index()]});
+            api.open_viewer(*work);
+            return false;
         }
         return true;
 
@@ -319,13 +253,12 @@ class DownloadableTab : public Tab<TabProvider> {
         return Tab::keyboard(key, modifiers, xkb_state);
     }
 
-    DownloadableTab(std::string name, std::function<void(DownloadParameter)>* const download, ThumbnailManager* const manager, std::function<void()>* const visible_range_change_hook) : Tab(std::move(name), manager, visible_range_change_hook),
-                                                                                                                                                                                         download(*download) {}
+    DownloadableTab(std::string name, ThumbnailManager* const manager, std::function<void()>* const visible_range_change_hook) : Tab(std::move(name), manager, visible_range_change_hook) {}
 };
 
 class NormalTab : public DownloadableTab {
   public:
-    NormalTab(std::string name, std::function<void(DownloadParameter)>* const download, ThumbnailManager* const manager, std::function<void()>* const visible_range_change_hook) : DownloadableTab(std::move(name), download, manager, visible_range_change_hook) {}
+    NormalTab(std::string name, ThumbnailManager* const manager, std::function<void()>* const visible_range_change_hook) : DownloadableTab(std::move(name), manager, visible_range_change_hook) {}
 };
 
 class SearchTab : public DownloadableTab {
@@ -353,69 +286,6 @@ class SearchTab : public DownloadableTab {
         return true;
     }
 
-    SearchTab(std::string name, std::function<void(DownloadParameter)>* const download, SearchManager* const search_manager, ThumbnailManager* const manager, std::function<void()>* const visible_range_change_hook) : DownloadableTab(std::move(name), download, manager, visible_range_change_hook),
-                                                                                                                                                                                                                        manager(*search_manager) {}
-};
-
-class ReadingTab : public Tab<ReadingTabProvider> {
-  private:
-    DownloadManager&       manager;
-    std::optional<Process> reader;
-
-    auto run_command(const std::vector<const char*> argv) -> void {
-        if(reader) {
-            reader->join();
-        }
-        reader.emplace(argv);
-    }
-
-  public:
-    auto keyboard(const xkb_keycode_t key, const htk::Modifiers modifiers, xkb_state* const xkb_state) -> bool {
-        if(key - 8 != KEY_BACKSLASH) {
-            return Tab::keyboard(key, modifiers, xkb_state);
-        }
-
-        const auto& ids = get_data();
-        if(ids.empty()) {
-            return Tab::keyboard(key, modifiers, xkb_state);
-        }
-
-        auto retry_parameter = DownloadParameter{};
-        {
-            const auto r = manager.find_info(ids[get_index()]);
-
-            if(r.info == nullptr) {
-                return false;
-            }
-
-            for(const auto s : r.info->status) {
-                switch(s) {
-                case PageState::Done:
-                    break;
-                case PageState::Error: {
-                    if(r.parameter == nullptr) {
-                        return false;
-                    }
-                    retry_parameter = *r.parameter;
-                    goto retry;
-                } break;
-                case PageState::None:
-                    return false;
-                }
-            }
-            run_command({"/usr/bin/imgview", r.info->path.data(), nullptr});
-            return false;
-        }
-    retry:
-        manager.add_queue(std::move(retry_parameter));
-        return true;
-    }
-
-    ReadingTab(std::string name, DownloadManager* const download_manager, ThumbnailManager* const manager, std::function<void()>* const visible_range_change_hook) : Tab(std::move(name), manager, visible_range_change_hook, download_manager),
-                                                                                                                                                                     manager(*download_manager) {}
-    ~ReadingTab() {
-        if(reader) {
-            reader->join();
-        }
-    }
+    SearchTab(std::string name, SearchManager* const search_manager, ThumbnailManager* const manager, std::function<void()>* const visible_range_change_hook) : DownloadableTab(std::move(name), manager, visible_range_change_hook),
+                                                                                                                                                                manager(*search_manager) {}
 };

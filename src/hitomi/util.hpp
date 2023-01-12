@@ -1,5 +1,5 @@
 #pragma once
-#define CUTIL_NS hitomi::internal
+#define CUTIL_NS hitomi
 #include "util/charconv.hpp"
 #include "util/error.hpp"
 #include "util/thread.hpp"

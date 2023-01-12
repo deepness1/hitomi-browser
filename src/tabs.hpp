@@ -4,7 +4,7 @@
 
 class TabsProvider {
   private:
-    using Data = htk::Variant<Layout<NormalTab>, Layout<SearchTab>, Layout<ReadingTab>>;
+    using Data = htk::Variant<Layout<NormalTab>, Layout<SearchTab>>;
 
   public:
     auto get_label(const Data& data) const -> std::string {
@@ -33,8 +33,6 @@ class TabsProvider {
             return {0x98 / 0xff.0p1, 0xf5 / 0xff.0p1, 0xff / 0xff.0p1, 1};
         case Data::index_of<Layout<SearchTab>>():
             return {0x8b / 0xff.0p1, 0x75 / 0xff.0p1, 0x00 / 0xff.0p1, 1};
-        case Data::index_of<Layout<ReadingTab>>():
-            return {0x48 / 0xff.0p1, 0x76 / 0xff.0p1, 0xff / 0xff.0p1, 1};
         }
         return {1, 0, 0, 1};
     }

@@ -30,7 +30,7 @@ class Work {
         return !japanese_title.empty() ? japanese_title : title;
     }
 
-    auto get_thumbnail() -> std::optional<Vector<uint8_t>> {
+    auto get_thumbnail() -> std::optional<Vector<std::byte>> {
         if(images.empty()) {
             return std::nullopt;
         }
@@ -69,67 +69,18 @@ class Work {
         return series;
     }
 
-    struct DownloadParameters {
-        const char*                                  savedir;
-        uint64_t                                     threads;
-        bool                                         webp       = false;
-        std::function<bool(uint64_t, bool)>          callback   = nullptr;
-        std::optional<std::pair<uint64_t, uint64_t>> page_range = std::nullopt;
-    };
-
-    auto download(const DownloadParameters& parameters) -> const char* {
-        if(!std::filesystem::exists(parameters.savedir) && !std::filesystem::create_directories(parameters.savedir)) {
-            return "failed to create save directory";
-        }
-
-        const auto page_begin = parameters.page_range.has_value() ? parameters.page_range->first : 0;
-        const auto page_end   = parameters.page_range.has_value() ? parameters.page_range->second : images.size();
-        if(page_begin >= page_end || page_end > images.size()) {
-            return "invalid page range";
-        }
-
-        auto index      = page_begin;
-        auto index_lock = std::mutex();
-        auto workers    = std::vector<std::thread>(parameters.threads);
-        auto error      = false;
-
-        for(auto& w : workers) {
-            w = std::thread([&]() {
-                while(true) {
-                    auto i = uint64_t();
-                    {
-                        const auto lock = std::lock_guard<std::mutex>(index_lock);
-                        if(index < page_end) {
-                            i = index;
-                            index += 1;
-                        } else {
-                            break;
-                        }
-                    }
-                    const auto r = images[i].download(parameters.savedir, parameters.webp);
-                    if(parameters.callback && !parameters.callback(i, r)) {
-                        break;
-                    }
-                    if(!r) {
-                        error = true;
-                    }
-                }
-            });
-        }
-        for(auto& w : workers) {
-            w.join();
-        }
-        return error ? "unknown error" : nullptr;
+    auto get_images() const -> const std::vector<Image>& {
+        return images;
     }
 
     Work(const GalleryID id) : id(id) {
-        auto url    = fmt::format("ltn.hitomi.la/galleries/{}.js", id);
-        auto buffer = internal::download_binary(url.data(), {.referer = internal::REFERER});
-        internal::dynamic_assert(buffer.has_value(), "failed to download metadata");
-        const auto json_head = std::find(buffer.value().begin(), buffer.value().end(), '=');
-        internal::dynamic_assert(json_head != buffer.value().end(), "invalid json");
-        const auto json = nlohmann::json::parse(json_head + 1, buffer.value().end());
-//nlohmann::detail::parse_error
+        auto url        = fmt::format("ltn.hitomi.la/galleries/{}.js", id);
+        auto buffer_opt = internal::download_binary(url.data(), {.referer = internal::REFERER});
+        dynamic_assert(buffer_opt.has_value(), "failed to download metadata");
+        const auto& buffer    = buffer_opt.value();
+        const auto  json_head = std::find(buffer.begin(), buffer.end(), std::byte('='));
+        dynamic_assert(json_head != buffer.end(), "invalid json");
+        const auto json = nlohmann::json::parse(std::bit_cast<const char*>(json_head + 1), std::bit_cast<const char*>(buffer.end()));
         for(auto& [key, value] : json.items()) {
             if(key == "title" && value.is_string()) {
                 title = value.get<std::string>();

@@ -4,6 +4,7 @@
 #include <getopt.h>
 
 #include "hitomi/hitomi.hpp"
+#include "util/error.hpp"
 
 namespace {
 struct ArgParseResult {
@@ -85,6 +86,44 @@ auto build_save_dir(const hitomi::Work& w) -> std::string {
     auto       dir    = replace_illeggal_chara(w.get_display_name()) + " " + id_str;
     return dir.size() < 256 ? dir : id_str;
 }
+
+inline auto download(const hitomi::Work& work, const std::string_view savedir, const size_t num_threads, const bool webp) -> bool {
+    if(!std::filesystem::exists(savedir) && !std::filesystem::create_directories(savedir)) {
+        return Error("failed to create save directory");
+    }
+
+    auto index      = size_t(0);
+    auto index_lock = std::mutex();
+    auto workers    = std::vector<std::thread>(num_threads);
+    auto error      = false;
+
+    for(auto& w : workers) {
+        w = std::thread([&]() {
+            while(true) {
+                auto i = uint64_t();
+                {
+                    const auto lock = std::lock_guard<std::mutex>(index_lock);
+                    if(index < work.get_pages()) {
+                        i = index;
+                        index += 1;
+                    } else {
+                        break;
+                    }
+                }
+                auto& image = work.get_images()[i];
+                if(const auto e = image.download(savedir, webp)) {
+                    warn(e.cstr());
+                    error = true;
+                }
+            }
+        });
+    }
+    for(auto& w : workers) {
+        w.join();
+    }
+    return true;
+}
+
 } // namespace
 
 int main(const int argc, const char* const argv[]) {
@@ -100,13 +139,11 @@ int main(const int argc, const char* const argv[]) {
     for(const auto i : args.ids) {
         auto w = hitomi::Work(i);
         printf("%s\n", w.get_display_name().data());
-        const auto save_path = std::filesystem::path(args.save_dir) / build_save_dir(w);
+        const auto savedir = std::filesystem::path(args.save_dir) / build_save_dir(w);
         while(true) {
-            const auto r = w.download({save_path.c_str(), args.threads, args.webp});
-            if(r == nullptr) {
+            if(download(w, savedir.string(), args.threads, args.webp)) {
                 break;
             }
-            printf(">Error: %s\n>Retry\n", r);
         }
     }
     hitomi::finish_hitomi();

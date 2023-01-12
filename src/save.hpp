@@ -5,8 +5,8 @@
 #include "util/error.hpp"
 
 struct LayoutConfig {
-    int64_t layout_type;
-    double  split_rate[2];
+    int64_t layout_type = 0;
+    double  split_rate[2] = {0.8, 0.8};
 };
 
 struct TabData {
@@ -19,13 +19,15 @@ struct TabData {
 struct SaveData {
     LayoutConfig         layout_config;
     std::vector<TabData> tabs;
-    size_t               tabs_index;
+    size_t               tabs_index = 0;
 };
 
 inline auto load_savedata() -> SaveData {
     const auto save_path = std::string(std::getenv("HOME")) + "/.cache/hitomi-browser.dat";
     auto       ifs       = std::fstream(save_path, std::ios::in | std::ios::binary);
-    dynamic_assert(static_cast<bool>(ifs));
+    if(!ifs) {
+        return SaveData();
+    }
 
     auto file = File{std::move(ifs)};
 

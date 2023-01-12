@@ -22,9 +22,9 @@ class Image {
     GalleryID id;
 
     std::string hash;
+    std::string name;
     bool        haswebp;
     bool        hasavif;
-    std::string name;
 
   public:
     auto get_thumbnail_url() const -> std::string {
@@ -33,18 +33,14 @@ class Image {
         return fmt::format("btn.hitomi.la/webpbigtn/{}/{}/{}.webp", hash_a, hash_b, hash);
     }
 
-    auto download(const char* const path, const bool alt) -> bool {
+    auto download(const bool alt, bool* const cancel = nullptr) const -> Result<Vector<std::byte>> {
         const auto hash_a   = hash.back();
         const auto hash_b   = hash.substr(hash.size() - 3, 2);
         const auto hash_str = hash_a + hash_b;
 
-        const auto sep      = name.find(".");
-        const auto base     = name.substr(0, sep);
-        const auto ext      = alt && haswebp ? internal::ALT_TYPE : name.substr(sep);
-        const auto filepath = std::string(path) + "/" + base + ext;
-        if(std::filesystem::exists(filepath)) {
-            return true;
-        }
+        const auto sep  = name.find(".");
+        const auto base = name.substr(0, sep);
+        const auto ext  = alt && haswebp ? internal::ALT_TYPE : name.substr(sep);
 
         const auto referer = fmt::format("https://hitomi.la/reader/{}.html", id);
         while(true) {
@@ -56,11 +52,13 @@ class Image {
             constexpr auto IMAGE_URL = "{}.hitomi.la/{}/{}/{}/{}{}";
             const auto     url       = alt && haswebp ? fmt::format(IMAGE_URL, subdomain, internal::ALT_TYPE + 1, gg.b, std::stoi(hash_str, nullptr, 16), hash, ext) : fmt::format(IMAGE_URL, subdomain, "images", gg.b, hash_str, hash, ext);
 
-            const auto buffer = internal::download_binary(url.data(), {.referer = referer.data(), .timeout = 120});
+            auto buffer = internal::download_binary(url.data(), {.referer = referer.data(), .timeout = 120, .cancel = cancel});
             if(buffer.has_value()) {
-                auto file = std::ofstream(filepath, std::ios::out | std::ios::binary);
-                file.write(reinterpret_cast<const char*>(buffer->begin()), buffer->get_size_raw());
-                return true;
+                return std::move(buffer.value());
+            }
+
+            if(cancel != nullptr && *cancel) {
+                return Error("download canceled");
             }
 
             auto [lock, globgg] = internal::gg.access();
@@ -72,20 +70,34 @@ class Image {
                     continue;
                 }
             }
-            internal::warn("failed to download ", base.data(), " from ", url.data());
-            if(std::filesystem::is_regular_file(filepath)) {
-                std::filesystem::remove(filepath);
-            }
-            return false;
+            return Error(build_string("failed to download ", base.data(), " from ", url.data()));
         }
     }
+
+    auto download(const std::string_view savedir, const bool alt, bool* const cancel = nullptr) const -> Error {
+        const auto buffer_r = download(alt, cancel);
+        if(!buffer_r) {
+            return buffer_r.as_error();
+        }
+        const auto& buffer = buffer_r.as_value();
+
+        const auto sep      = name.find(".");
+        const auto base     = name.substr(0, sep);
+        const auto ext      = alt && haswebp ? internal::ALT_TYPE : name.substr(sep);
+        const auto filepath = std::string(savedir) + "/" + base + ext;
+
+        auto file = std::ofstream(filepath, std::ios::out | std::ios::binary);
+        file.write(reinterpret_cast<const char*>(buffer.begin()), buffer.get_size_raw());
+        return Error();
+    }
+
 
     Image(const GalleryID id, const nlohmann::json& info)
         : id(id),
           hash(info["hash"].get<std::string>()),
+          name(info["name"].get<std::string>()),
           haswebp(info.contains("haswebp") && (info["haswebp"].get<int>() == 1)),
-          hasavif(info.contains("hasavif") && (info["hasavif"].get<int>() == 1)),
-          name(info["name"].get<std::string>()) {
+          hasavif(info.contains("hasavif") && (info["hasavif"].get<int>() == 1)) {
     }
 };
 } // namespace hitomi

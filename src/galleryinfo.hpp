@@ -101,5 +101,5 @@ class GalleryInfo : public htk::widget::Widget {
 
     GalleryInfo(int64_t& layout_type, ThumbnailManager& manager) : layout_type(layout_type),
                                                                    manager(manager),
-                                                                   font({htk::fc::find_fontpath_from_name(fontname).data()}, 16) {}
+                                                                   font({htk::fc::find_fontpath_from_name(fontname).unwrap().data()}, 16) {}
 };

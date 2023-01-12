@@ -16,7 +16,6 @@ using InputOpener = std::function<void(InputHander, std::string, std::string, si
 enum class TabType : uint64_t {
     Normal  = 0,
     Search  = 1,
-    Reading = 2,
 };
 
 struct ThumbnailedWork {

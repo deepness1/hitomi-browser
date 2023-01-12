@@ -49,7 +49,7 @@ class Font {
             if(font[0] == '/') {
                 names.emplace_back(font);
             } else {
-                names.emplace_back(fc::find_fontpath_from_name(font));
+                names.emplace_back(fc::find_fontpath_from_name(font).unwrap());
             }
         }
         return Font{std::move(names), size};

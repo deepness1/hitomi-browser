@@ -19,6 +19,7 @@ struct DownloadParameters {
     const char* range   = nullptr;
     const char* referer = nullptr;
     int         timeout = 30;
+    bool*       cancel  = nullptr;
 };
 
 inline auto encode_url(std::string const& url) -> std::string {
@@ -44,18 +45,24 @@ inline auto encode_url(std::string const& url) -> std::string {
     return escaped.str();
 }
 
-template <class T = uint8_t>
+template <class T = std::byte>
 auto download_binary(const char* const url, const DownloadParameters& parameters) -> std::optional<Vector<T>> {
     struct Callback {
         static auto write_callback(const void* const p, const size_t s, const size_t n, void* const u) -> size_t {
-            auto&      buffer = *reinterpret_cast<Vector<T>*>(u);
+            auto&      buffer = *std::bit_cast<Vector<T>*>(u);
             const auto len    = s * n;
             const auto head   = buffer.get_size_raw();
             buffer.resize_raw(head + len);
-            std::memcpy(reinterpret_cast<uint8_t*>(buffer.begin()) + head, p, len);
+            std::memcpy(std::bit_cast<uint8_t*>(buffer.begin()) + head, p, len);
             return len;
         }
+
+        static auto info_callback(void* const clientp, const curl_off_t /*dltotal*/, const curl_off_t /*dlnow*/, const curl_off_t /*ultotal*/, const curl_off_t /*ulnow*/) -> int {
+            const auto cancel = std::bit_cast<bool*>(clientp);
+            return (cancel != nullptr && *cancel) ? -1 : 0;
+        }
     };
+
     struct CurlHandle {
         CURL* curl;
 
@@ -77,6 +84,11 @@ auto download_binary(const char* const url, const DownloadParameters& parameters
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, Callback::write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, parameters.timeout);
+    if(parameters.cancel != nullptr) {
+        curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, Callback::info_callback);
+        curl_easy_setopt(curl, CURLOPT_XFERINFODATA, parameters.cancel);
+        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
+    }
     if(parameters.range != nullptr) {
         curl_easy_setopt(curl, CURLOPT_RANGE, parameters.range);
     }
@@ -89,6 +101,9 @@ auto download_binary(const char* const url, const DownloadParameters& parameters
 
 download:
     const auto res = curl_easy_perform(curl);
+    if(res == CURLE_ABORTED_BY_CALLBACK) {
+        return std::nullopt;
+    }
     if(res != CURLE_OK) {
         if(parameters.timeout == 0) {
             return std::nullopt;

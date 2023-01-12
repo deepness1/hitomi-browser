@@ -65,7 +65,7 @@ class Message : public htk::widget::Widget {
 
     template <class... Args>
     Message(Args&&... args) : child(std::forward<Args>(args)...),
-                              font({htk::fc::find_fontpath_from_name(fontname).data()}, 20) {}
+                              font({htk::fc::find_fontpath_from_name(fontname).unwrap().data()}, 20) {}
 
     ~Message() {
         if(timer.joinable()) {

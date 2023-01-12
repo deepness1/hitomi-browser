@@ -17,7 +17,7 @@ inline auto fetch_ids(const char* const url) -> Vector<hitomi::GalleryID> {
     if(!buffer) {
         return {};
     }
-    auto arr = ByteReader(reinterpret_cast<uint8_t*>(buffer->begin()), buffer->get_size_raw());
+    auto arr = ByteReader(std::bit_cast<std::byte*>(buffer->begin()), buffer->get_size());
     for(auto i = size_t(0); i < buffer->get_size(); i += 1) {
         (*buffer)[i] = arr.read_32_endian();
     }
@@ -50,14 +50,14 @@ inline auto fetch_by_language(const std::string_view lang) -> Vector<GalleryID> 
 
 // keyword
 using Range = std::array<uint64_t, 2>;
-using Key   = std::vector<uint8_t>;
+using Key   = std::vector<std::byte>;
 class Node {
   private:
     std::vector<Key>      keys;
     std::vector<Range>    datas;
     std::vector<uint64_t> subnode_addresses;
 
-    static auto compare_bytes(const std::vector<uint8_t>& a, const std::vector<uint8_t>& b) -> int {
+    static auto compare_bytes(const std::vector<std::byte>& a, const std::vector<std::byte>& b) -> int {
         const auto min = std::min(a.size(), b.size());
         for(auto i = size_t(0); i < min; i += 1) {
             if(static_cast<uint8_t>(a[i]) < static_cast<uint8_t>(b[i])) {
@@ -101,7 +101,7 @@ class Node {
         return subnode_addresses[index];
     }
 
-    Node(const Vector<uint8_t>& bytes) {
+    Node(const Vector<std::byte>& bytes) {
         auto arr = ByteReader(bytes.begin(), bytes.get_size_raw());
 
         const auto keys_limit = arr.read_32_endian();
@@ -139,13 +139,13 @@ inline auto get_index_version(const char* const index_name) -> uint64_t {
     return std::stoi(reinterpret_cast<const char*>(buffer.value().begin()));
 }
 
-inline auto get_data_by_range(const char* const url, const Range& range) -> Vector<uint8_t> {
+inline auto get_data_by_range(const char* const url, const Range& range) -> Vector<std::byte> {
     const auto range_str = fmt::format("{}-{}", range[0], range[1]);
     auto       buffer    = download_binary(url, {.range = range_str.data(), .referer = internal::REFERER});
     if(!buffer.has_value()) {
         return {};
     }
-    return buffer ? std::move(*buffer) : Vector<uint8_t>{};
+    return buffer ? std::move(*buffer) : Vector<std::byte>{};
 }
 
 inline auto get_node_at_address(const uint64_t address, const uint64_t index_version) -> Node {
@@ -156,7 +156,7 @@ inline auto get_node_at_address(const uint64_t address, const uint64_t index_ver
     return Node(buffer);
 }
 
-inline auto search_for_key(const std::vector<uint8_t>& key, const Node& node, uint64_t index_version) -> Range {
+inline auto search_for_key(const std::vector<std::byte>& key, const Node& node, uint64_t index_version) -> Range {
     auto index = uint64_t();
     if(node.locate_key(key, index)) {
         return node.get_data(index);
@@ -191,12 +191,12 @@ inline auto fetch_ids_with_range(const Range range, const uint64_t index_version
     return ids;
 }
 
-inline auto calc_sha256(const std::string_view string) -> std::vector<uint8_t> {
-    auto digest  = std::vector<uint8_t>(SHA256_DIGEST_LENGTH);
+inline auto calc_sha256(const std::string_view string) -> std::vector<std::byte> {
+    auto digest  = std::vector<std::byte>(SHA256_DIGEST_LENGTH);
     auto sha_ctx = SHA256_CTX();
     SHA256_Init(&sha_ctx);
     SHA256_Update(&sha_ctx, string.data(), string.size());
-    SHA256_Final(digest.data(), &sha_ctx);
+    SHA256_Final(std::bit_cast<unsigned char*>(digest.data()), &sha_ctx);
     return digest;
 }
 
@@ -266,7 +266,7 @@ inline auto search(const std::vector<std::string_view>& args) -> std::vector<Gal
             filter(internal::search_by_keyword(a.substr(1)));
             break;
         default:
-            internal::warn("invalid argument");
+            warn("invalid argument");
             break;
         }
     }
