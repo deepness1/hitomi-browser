@@ -1,5 +1,8 @@
 #pragma once
+#define GAWL_KEYSYM
+#define GAWL_KEYCODE
 #include "global.hpp"
+#include "htk/window.hpp"
 #include "imgview.hpp"
 #include "input.hpp"
 #include "layout.hpp"
@@ -15,14 +18,13 @@ class Browser {
     using Modal   = htk::modal::Modal<Tabs, Input>;
     using Message = Message<Modal>;
 
-    using Imgview = imgview::Imgview<Message>;
-    using Window  = htk::window::Window<Message, Imgview>;
+    using Window = htk::window::Window<Message>;
 
   public:
     auto run() -> void {
         auto savedata = load_savedata();
 
-        auto  app    = Window::Application();
+        auto  app    = gawl::Application();
         auto& window = app.open_window<Window>({.title = "hitomi-browser", .manual_refresh = true},
                                                // Message
                                                // (none)
@@ -194,7 +196,7 @@ class Browser {
         };
 
         api.open_viewer = [&app](hitomi::Work work) {
-            app.open_window<Imgview>({.title = work.get_display_name().data(), .manual_refresh = true}, std::move(work));
+            app.open_window<imgview::Imgview>({.title = work.get_display_name().data(), .manual_refresh = true}, std::move(work));
         };
 
         window.set_finalizer([&tabs, &savedata]() {

@@ -1,7 +1,7 @@
 #pragma once
 #include <functional>
 
-#include <gawl/wayland/gawl.hpp>
+#include <gawl/graphic.hpp>
 
 #include "hitomi/hitomi.hpp"
 #include "util/error.hpp"

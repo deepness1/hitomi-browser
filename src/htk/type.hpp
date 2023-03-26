@@ -1,7 +1,7 @@
 #pragma once
 #include <stack>
 
-#include <gawl/wayland/gawl.hpp>
+#include <gawl/textrender.hpp>
 
 #include "fc.hpp"
 

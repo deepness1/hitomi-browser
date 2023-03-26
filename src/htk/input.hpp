@@ -1,4 +1,6 @@
 #pragma once
+#include <gawl/polygon.hpp>
+
 #include "fc.hpp"
 #include "theme.hpp"
 #include "widget.hpp"

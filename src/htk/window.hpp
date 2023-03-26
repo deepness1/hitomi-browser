@@ -2,17 +2,13 @@
 #include <gawl/wayland/gawl.hpp>
 
 #include "widget.hpp"
-#include "window-decl.hpp"
 
 namespace htk::window {
-template <class RootWidget, class... OtherWindows>
+template <class RootWidget>
 class Window {
   private:
-    using Gawl       = GawlTemplate<RootWidget, OtherWindows...>;
-    using GawlWindow = typename Gawl::template Window<Window>;
-
-    GawlWindow& window;
-    RootWidget  root_widget;
+    gawl::Window<Window>& window;
+    RootWidget            root_widget;
 
     std::function<void()> prelude;
     std::function<void()> postlude;
@@ -29,10 +25,8 @@ class Window {
     }
 
   public:
-    using Application = typename Gawl::Application;
-
     auto refresh_callback() -> void {
-        if constexpr(widget::WidgetRefresh<RootWidget, GawlWindow>) {
+        if constexpr(widget::WidgetRefresh<RootWidget, gawl::Window<Window>>) {
             if(prelude) prelude();
 
             root_widget.refresh(window);
@@ -66,7 +60,7 @@ class Window {
     }
 
     /*
-    auto pointermove_callback(const gawl::Point& point) -> void {
+    auto pointer_move_callback(const gawl::Point& point) -> void {
     }
     auto click_callback(const uint32_t button, const gawl::ButtonState state) -> void {
     }
@@ -79,13 +73,15 @@ class Window {
     auto refresh() -> void {
         window.refresh();
     }
-    auto get_window() -> GawlWindow& {
+
+    auto get_window() -> gawl::Window<Window>& {
         return window;
     }
 
     auto get_widget() -> RootWidget& {
         return root_widget;
     }
+
     auto set_locker(std::function<void()> new_prelude, std::function<void()> new_postlude) -> void {
         prelude  = new_prelude;
         postlude = new_postlude;
@@ -96,7 +92,7 @@ class Window {
     }
 
     template <class... Args>
-    Window(GawlWindow& window, Args&&... args) : window(window), root_widget(std::forward<Args>(args)...) {}
+    Window(gawl::Window<Window>& window, Args&&... args) : window(window), root_widget(std::forward<Args>(args)...) {}
 
     ~Window() {
         if(finalizer) {

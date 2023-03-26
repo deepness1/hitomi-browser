@@ -2,13 +2,14 @@
 #include <variant>
 
 #include <gawl/graphic.hpp>
+#include <gawl/wayland/gawl.hpp>
+#include <gawl/textrender.hpp>
 
 #include "hitomi/work.hpp"
 #include "htk/fc.hpp"
 #include "util/error.hpp"
 #include "util/thread.hpp"
 #include "util/variant.hpp"
-#include "window.hpp"
 
 namespace imgview {
 using Graphic  = std::shared_ptr<gawl::Graphic>;
@@ -21,16 +22,12 @@ struct Loader {
     bool        cancel;
 };
 
-template <class RootWidget>
 class Imgview {
   private:
-    using Gawl       = GawlTemplate<RootWidget>;
-    using GawlWindow = typename Gawl::template Window<Imgview>;
-
     constexpr static auto cache_range = 16;
     constexpr static auto num_loaders = 8;
 
-    GawlWindow&                  window;
+    gawl::Window<Imgview>& window;
     int                          page = 0;
     hitomi::Work                 work;
     Graphic                      placeholder;
@@ -211,7 +208,7 @@ class Imgview {
         }
     }
 
-    Imgview(GawlWindow& window, hitomi::Work work_a) : window(window),
+    Imgview(gawl::Window<Imgview>& window, hitomi::Work work_a) : window(window),
                                                        work(std::move(work_a)),
                                                        font(gawl::TextRender({htk::fc::find_fontpath_from_name("Noto Sans CJK JP:style=Bold").unwrap().data()}, 16)) {
         auto& cache = critical_cache.unsafe_access();

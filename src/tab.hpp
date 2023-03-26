@@ -151,9 +151,9 @@ class Tab : public htk::table::Table<Provider, hitomi::GalleryID> {
         case KEY_P: {
             api.input([this](std::string& buffer) {
                 const auto rel       = buffer[0] == '+' || buffer[0] == '-';
-                auto       new_index = rel ? this->get_index() : 1;
+                auto       new_index = rel ? this->get_index() : 0;
                 try {
-                    new_index += std::stoi(buffer);
+                    new_index += (std::stoi(buffer) - 1);
                 } catch(const std::invalid_argument&) {
                     return;
                 }

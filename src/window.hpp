@@ -1,5 +1,4 @@
 #pragma once
-#include "htk/window-decl.hpp"
 
 namespace imgview {
 template <class RootWidget>
