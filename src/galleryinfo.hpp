@@ -26,11 +26,11 @@ class GalleryInfo : public htk::widget::Widget {
             return;
         }
 
-        if(p->second.index() != Caches::Type::index_of<ThumbnailedWork>()) {
+        if(p->second.get_index() != Caches::Type::index_of<ThumbnailedWork>) {
             return;
         }
 
-        auto& info = p->second.get<ThumbnailedWork>();
+        auto& info = p->second.as<ThumbnailedWork>();
 
         auto thumbnail_bottom = region.a.y;
         if(info.thumbnail) {

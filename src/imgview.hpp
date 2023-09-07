@@ -14,7 +14,7 @@
 namespace imgview {
 using Graphic  = std::shared_ptr<gawl::Graphic>;
 using Drawable = Variant<Graphic, std::string>;
-using Image    = std::variant<std::thread::id, Drawable>; // download_thread_id, graphic
+using Image    = Variant<std::thread::id, Drawable>; // download_thread_id, graphic
 
 struct Loader {
     std::thread thread;
@@ -46,7 +46,7 @@ class Imgview {
 
         auto [lock, cache] = critical_cache.access();
         for(auto i = index_begin; i <= index_end; i += 1) {
-            const auto tid = std::get_if<std::thread::id>(&cache[i]);
+            const auto tid = cache[i].get<std::thread::id>();
             if(tid == nullptr || *tid != std::thread::id()) {
                 continue;
             }
@@ -83,9 +83,9 @@ class Imgview {
             const auto buffer_r = image.download(true, &this_loader.cancel);
             if(!buffer_r) {
                 if(!this_loader.cancel) {
-                    auto [lock, cache]   = critical_cache.access();
-                    cache[download_page] = Drawable(std::string(buffer_r.as_error().cstr()));
-                    refresh              = download_page == page;
+                    auto [lock, cache] = critical_cache.access();
+                    cache[download_page].emplace<Drawable>(Drawable(Tag<std::string>(), std::string(buffer_r.as_error().cstr())));
+                    refresh = download_page == page;
                 }
                 break;
             }
@@ -93,16 +93,16 @@ class Imgview {
 
             const auto pbuffer_r = gawl::PixelBuffer::from_blob(buffer.begin(), buffer.get_size());
             if(!pbuffer_r) {
-                auto [lock, cache]   = critical_cache.access();
-                cache[download_page] = Drawable(std::string(pbuffer_r.as_error().cstr()));
-                refresh              = download_page == page;
+                auto [lock, cache] = critical_cache.access();
+                cache[download_page].emplace<Drawable>(Drawable(Tag<std::string>(), std::string(pbuffer_r.as_error().cstr())));
+                refresh = download_page == page;
                 break;
             }
             const auto& pbuffer = pbuffer_r.as_value();
 
-            auto [lock, cache]   = critical_cache.access();
-            cache[download_page] = Drawable(Graphic(new gawl::Graphic(pbuffer)));
-            refresh              = download_page == page;
+            auto [lock, cache] = critical_cache.access();
+            cache[download_page].emplace<Drawable>(Tag<Graphic>(), new gawl::Graphic(pbuffer));
+            refresh = download_page == page;
             context.wait();
             break;
         } while(0);
@@ -135,10 +135,10 @@ class Imgview {
 
         auto [lock, cache] = critical_cache.access();
         for(auto i = 0; i < index_begin; i += 1) {
-            cache[i] = std::thread::id();
+            cache[i].emplace<std::thread::id>();
         }
         for(auto i = index_end + 1; i < images_size; i += 1) {
-            cache[i] = std::thread::id();
+            cache[i].emplace<std::thread::id>();
         }
     }
 
@@ -151,14 +151,14 @@ class Imgview {
 
         auto [lock, cache] = critical_cache.access();
         auto& image        = cache[page];
-        if(const auto drawable = std::get_if<Drawable>(&image); drawable != nullptr) {
-            switch(drawable->index()) {
-            case Drawable::index_of<Graphic>():
-                placeholder = drawable->get<Graphic>();
+        if(const auto drawable = image.get<Drawable>(); drawable != nullptr) {
+            switch(drawable->get_index()) {
+            case Drawable::index_of<Graphic>:
+                placeholder = drawable->as<Graphic>();
                 placeholder->draw_fit_rect(window, screen_rect);
                 break;
-            case Drawable::index_of<std::string>():
-                font.draw_fit_rect(window, screen_rect, {1, 1, 1, 1}, drawable->get<std::string>());
+            case Drawable::index_of<std::string>:
+                font.draw_fit_rect(window, screen_rect, {1, 1, 1, 1}, drawable->as<std::string>());
                 break;
             }
         } else {
@@ -197,7 +197,7 @@ class Imgview {
         case KEY_C: {
             {
                 auto [lock, cache] = critical_cache.access();
-                cache[page]        = std::thread::id();
+                cache[page].emplace<std::thread::id>();
             }
             loader_event.wakeup();
             window.refresh();
@@ -213,7 +213,10 @@ class Imgview {
                                                                   work(std::move(work_a)),
                                                                   font(gawl::TextRender({htk::fc::find_fontpath_from_name("Noto Sans CJK JP:style=Bold").unwrap().data()}, 16)) {
         auto& cache = critical_cache.unsafe_access();
-        cache.resize(work.get_pages(), std::thread::id());
+        cache.resize(work.get_pages());
+        for(auto& c : cache) {
+            c.emplace<std::thread::id>();
+        }
 
         for(auto i = 0; i < int(loaders.size()); i += 1) {
             loaders[i] = Loader{std::thread([this, i]() {

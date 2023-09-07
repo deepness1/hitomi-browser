@@ -76,7 +76,7 @@ class ThumbnailManager {
                             const auto p = data.find(i);
                             if(p == data.end()) {
                                 target       = i;
-                                data[target] = CacheState::Downloading;
+                                data[target] = Caches::Type(Tag<CacheState>(), CacheState::Downloading);
                                 break;
                             }
                         }
@@ -86,12 +86,12 @@ class ThumbnailManager {
                             auto w = ThumbnailedWork(target);
 
                             auto [lock, caches] = critical_caches.access();
-                            caches.data[target] = std::move(w);
+                            caches.data[target] = Caches::Type(Tag<ThumbnailedWork>(), std::move(w));
                             context.wait();
                             api.refresh_window();
                         } catch(const std::runtime_error&) {
                             auto [lock, caches] = critical_caches.access();
-                            caches.data[target] = CacheState::Error;
+                            caches.data[target] = Caches::Type(Tag<CacheState>(), CacheState::Error);
                             api.show_message(build_string("failed to download metadata for ", target));
                         }
                     } else {

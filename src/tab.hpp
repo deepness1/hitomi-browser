@@ -22,11 +22,11 @@ class TabProvider {
             return std::to_string(id);
         } else {
             auto& cache = p->second;
-            switch(cache.index()) {
-            case Caches::Type::index_of<ThumbnailedWork>():
-                return cache.get<ThumbnailedWork>().work.get_display_name();
-            case Caches::Type::index_of<CacheState>():
-                switch(cache.get<CacheState>()) {
+            switch(cache.get_index()) {
+            case Caches::Type::index_of<ThumbnailedWork>:
+                return cache.as<ThumbnailedWork>().work.get_display_name();
+            case Caches::Type::index_of<CacheState>:
+                switch(cache.as<CacheState>()) {
                 case CacheState::Downloading:
                     return std::to_string(id) + "...";
                 case CacheState::Error:
@@ -95,10 +95,10 @@ class Tab : public htk::table::Table<Provider, hitomi::GalleryID> {
             return nullptr;
         }
         auto& type = p->second;
-        if(type.index() != Caches::Type::index_of<ThumbnailedWork>()) {
+        if(type.get_index() != Caches::Type::index_of<ThumbnailedWork>) {
             return nullptr;
         }
-        return &type.template get<ThumbnailedWork>().work;
+        return &type.template as<ThumbnailedWork>().work;
     }
 
   public:
