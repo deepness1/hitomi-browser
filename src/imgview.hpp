@@ -2,8 +2,8 @@
 #include <variant>
 
 #include <gawl/graphic.hpp>
-#include <gawl/wayland/gawl.hpp>
 #include <gawl/textrender.hpp>
+#include <gawl/wayland/gawl.hpp>
 
 #include "hitomi/work.hpp"
 #include "htk/fc.hpp"
@@ -27,7 +27,7 @@ class Imgview {
     constexpr static auto cache_range = 16;
     constexpr static auto num_loaders = 8;
 
-    gawl::Window<Imgview>& window;
+    gawl::Window<Imgview>&       window;
     int                          page = 0;
     hitomi::Work                 work;
     Graphic                      placeholder;
@@ -82,9 +82,11 @@ class Imgview {
             this_loader.cancel  = false;
             const auto buffer_r = image.download(true, &this_loader.cancel);
             if(!buffer_r) {
-                auto [lock, cache]   = critical_cache.access();
-                cache[download_page] = Drawable(std::string(buffer_r.as_error().cstr()));
-                refresh              = download_page == page;
+                if(!this_loader.cancel) {
+                    auto [lock, cache]   = critical_cache.access();
+                    cache[download_page] = Drawable(std::string(buffer_r.as_error().cstr()));
+                    refresh              = download_page == page;
+                }
                 break;
             }
             const auto& buffer = buffer_r.as_value();
@@ -194,7 +196,6 @@ class Imgview {
         } break;
         case KEY_C: {
             {
-
                 auto [lock, cache] = critical_cache.access();
                 cache[page]        = std::thread::id();
             }
@@ -209,8 +210,8 @@ class Imgview {
     }
 
     Imgview(gawl::Window<Imgview>& window, hitomi::Work work_a) : window(window),
-                                                       work(std::move(work_a)),
-                                                       font(gawl::TextRender({htk::fc::find_fontpath_from_name("Noto Sans CJK JP:style=Bold").unwrap().data()}, 16)) {
+                                                                  work(std::move(work_a)),
+                                                                  font(gawl::TextRender({htk::fc::find_fontpath_from_name("Noto Sans CJK JP:style=Bold").unwrap().data()}, 16)) {
         auto& cache = critical_cache.unsafe_access();
         cache.resize(work.get_pages(), std::thread::id());
 
