@@ -204,6 +204,7 @@ class Imgview {
         } break;
         case KEY_Q:
         case KEY_BACKSLASH:
+            system("swaymsg 'focus prev'"); // hack: closing window takes time
             window.close_window();
             break;
         }
