@@ -2,7 +2,7 @@
 #include <vector>
 
 #include <fmt/format.h>
-#include <openssl/sha.h>
+#include <openssl/evp.h>
 
 #include "bytereader.hpp"
 #include "misc.hpp"
@@ -191,13 +191,15 @@ inline auto fetch_ids_with_range(const Range range, const uint64_t index_version
     return ids;
 }
 
-inline auto calc_sha256(const std::string_view string) -> std::vector<std::byte> {
-    auto digest  = std::vector<std::byte>(SHA256_DIGEST_LENGTH);
-    auto sha_ctx = SHA256_CTX();
-    SHA256_Init(&sha_ctx);
-    SHA256_Update(&sha_ctx, string.data(), string.size());
-    SHA256_Final(std::bit_cast<unsigned char*>(digest.data()), &sha_ctx);
-    return digest;
+inline auto calc_sha256(const std::string_view string) -> std::array<std::byte, 32> {
+    auto buf = std::array<std::byte, 32>();
+    auto md = EVP_get_digestbyname("SHA256");
+    auto ctx = EVP_MD_CTX_new();
+    dynamic_assert(EVP_DigestInit_ex2(ctx, md, NULL));
+    dynamic_assert(EVP_DigestUpdate(ctx, string.data(), string.size()));
+    dynamic_assert(EVP_DigestFinal_ex(ctx, reinterpret_cast<unsigned char *>(buf.data()), NULL));
+    EVP_MD_CTX_free(ctx);
+    return buf;
 }
 
 inline auto search_by_keyword(const std::string_view keyword) -> Vector<GalleryID> {
