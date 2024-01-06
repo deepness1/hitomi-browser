@@ -23,17 +23,20 @@ concept TabProviderOptionalRename = requires(P& m, Variant<Ts...>& data) {
     { m.rename(data) } -> std::same_as<bool>;
 };
 
-enum Actions {
-    Next,
-    Prev,
-    SwapNext,
-    SwapPrev,
-    EraseCurrent,
-    Rename,
+struct Actions {
+    enum : uint32_t {
+        None = 0,
+        Next,
+        Prev,
+        SwapNext,
+        SwapPrev,
+        EraseCurrent,
+        Rename,
+    };
 };
 
 template <class Provider, TabChild... Ts>
-requires TabProvider<Provider, Ts...>
+    requires TabProvider<Provider, Ts...>
 class Tab : public widget::Widget {
   private:
     std::list<Variant<Ts...>> data;
@@ -86,7 +89,7 @@ class Tab : public widget::Widget {
         return rect.width() + padding * 2;
     }
 
-    auto do_action(const Actions action) -> bool {
+    auto do_action(const uint32_t action) -> bool {
         switch(action) {
         case Actions::Next:
         case Actions::Prev: {
@@ -174,13 +177,8 @@ class Tab : public widget::Widget {
     }
 
     auto keyboard(const xkb_keycode_t key, const Modifiers modifiers, xkb_state* const xkb_state) -> bool {
-        if(const auto k = keybinds.find(key - 8); k != keybinds.end()) {
-            for(const auto& b : k->second) {
-                if(modifiers != b.modifiers) {
-                    continue;
-                }
-                return do_action(static_cast<Actions>(b.action));
-            }
+        if(const auto action = keybind_match(keybinds, key, modifiers); action != 0) {
+            return do_action(action);
         }
         if(data.empty()) {
             return false;

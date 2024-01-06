@@ -2,13 +2,13 @@
 #include <gawl/wayland/gawl.hpp>
 
 #include "type.hpp"
+#include "keybind.hpp"
 
 namespace htk::widget {
 template <class W, class Screen>
 concept WidgetRefresh = requires(W& m, Screen& screen) {
     { m.refresh(screen) } -> std::same_as<void>;
-}
-&&gawl::concepts::Screen<Screen>;
+} && gawl::concepts::Screen<Screen>;
 
 template <class W>
 concept WidgetKeyboard = requires(W& m, xkb_keycode_t key, Modifiers modifiers, xkb_state* xkb_state) {

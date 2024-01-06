@@ -39,14 +39,15 @@ class Browser {
         auto& message = window.get_widget();
         auto& modal   = message.get_child();
         auto& tabs    = modal.get_child();
-        {
-            auto& keybinds = tabs.get_keybinds();
 
-            keybinds[KEY_DOWN] = {{htk::Modifiers::None, htk::tab::Actions::Next}, {htk::Modifiers::Control, htk::tab::Actions::SwapNext}};
-            keybinds[KEY_UP]   = {{htk::Modifiers::None, htk::tab::Actions::Prev}, {htk::Modifiers::Control, htk::tab::Actions::SwapPrev}};
-            keybinds[KEY_X]    = {{htk::Modifiers::None, htk::tab::Actions::EraseCurrent}};
-            keybinds[KEY_F2]   = {{htk::Modifiers::None, htk::tab::Actions::Rename}};
-        }
+        tabs.get_keybinds() = htk::Keybinds{
+            {KEY_DOWN, htk::Modifiers::None, htk::tab::Actions::Next},
+            {KEY_DOWN, htk::Modifiers::Control, htk::tab::Actions::SwapNext},
+            {KEY_UP, htk::Modifiers::None, htk::tab::Actions::Prev},
+            {KEY_UP, htk::Modifiers::Control, htk::tab::Actions::SwapPrev},
+            {KEY_X, htk::Modifiers::None, htk::tab::Actions::EraseCurrent},
+            {KEY_F2, htk::Modifiers::None, htk::tab::Actions::Rename},
+        };
 
         api.refresh_window = [&window]() {
             window.refresh();
@@ -113,10 +114,14 @@ class Browser {
             layout.visit([&layout](auto& l) {
                 auto& keybinds = l.get_tab().get_keybinds();
 
-                keybinds[KEY_RIGHT]    = {{htk::Modifiers::None, htk::table::Actions::Next}};
-                keybinds[KEY_PAGEDOWN] = {{htk::Modifiers::None, htk::table::Actions::Prev}};
+                keybinds = htk::Keybinds{
+                    {KEY_RIGHT, htk::Modifiers::None, htk::table::Actions::Next},
+                    {KEY_J, htk::Modifiers::None, htk::table::Actions::Next},
+                    {KEY_PAGEDOWN, htk::Modifiers::None, htk::table::Actions::Prev},
+                    {KEY_K, htk::Modifiers::None, htk::table::Actions::Prev},
+                };
                 if(layout.index() != layout.index_of<Layout<SearchTab>>()) {
-                    keybinds[KEY_BACKSPACE] = {{htk::Modifiers::None, htk::table::Actions::EraseCurrent}};
+                    keybinds.push_back({KEY_BACKSPACE, htk::Modifiers::None, htk::table::Actions::EraseCurrent});
                 }
             });
         };

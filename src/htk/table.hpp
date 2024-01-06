@@ -24,14 +24,17 @@ concept TableProviderOptoinalDecorate = requires(P& m, S& screen, T& data, gawl:
     { m.decorate(screen, data, rect) } -> std::same_as<void>;
 };
 
-enum Actions {
-    Next,
-    Prev,
-    EraseCurrent,
+struct Actions {
+    enum : uint32_t {
+        None = 0,
+        Next,
+        Prev,
+        EraseCurrent,
+    };
 };
 
 template <class Provider, class T>
-requires TableProvider<Provider, T>
+    requires TableProvider<Provider, T>
 class Table : public widget::Widget {
   private:
     std::vector<T>   data;
@@ -48,7 +51,7 @@ class Table : public widget::Widget {
         }
     }
 
-    auto do_action(const Actions action) -> bool {
+    auto do_action(const uint32_t action) -> bool {
         switch(action) {
         case Actions::Next:
         case Actions::Prev: {
@@ -125,13 +128,8 @@ class Table : public widget::Widget {
     }
 
     auto keyboard(const xkb_keycode_t key, const Modifiers modifiers, xkb_state* const /*xkb_state*/) -> bool {
-        if(const auto k = keybinds.find(key - 8); k != keybinds.end()) {
-            for(const auto& b : k->second) {
-                if(modifiers != b.modifiers) {
-                    continue;
-                }
-                return do_action(static_cast<Actions>(b.action));
-            }
+        if(const auto action = keybind_match(keybinds, key, modifiers); action != 0) {
+            return do_action(action);
         }
         return false;
     }
