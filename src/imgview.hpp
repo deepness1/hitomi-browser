@@ -185,7 +185,7 @@ class Imgview {
 
         switch(code) {
         case KEY_RIGHT:
-        case KEY_PAGEDOWN:
+        case KEY_DOWN:
         case KEY_SPACE: {
             const auto next = code == KEY_RIGHT || code == KEY_SPACE;
 
