@@ -58,6 +58,15 @@ class ThumbnailManager {
         workers_event.wakeup();
     }
 
+    auto shutdown() -> void {
+        if(!std::exchange(workers_exit, true)) {
+            workers_event.wakeup();
+            for(auto& w : workers) {
+                w.join();
+            }
+        }
+    }
+
     auto erase_cache(const hitomi::GalleryID id) -> bool {
         auto [lock, caches] = critical_caches.access();
         if(const auto p = caches.data.find(id); p == caches.data.end()) {
@@ -114,10 +123,6 @@ class ThumbnailManager {
     }
 
     ~ThumbnailManager() {
-        workers_exit = true;
-        workers_event.wakeup();
-        for(auto& w : workers) {
-            w.join();
-        }
+        shutdown();
     }
 };

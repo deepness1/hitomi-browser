@@ -204,7 +204,7 @@ class Browser {
             app.open_window<imgview::Imgview>({.title = work.get_display_name().data(), .manual_refresh = true}, std::move(work));
         };
 
-        window.set_finalizer([&tabs, &savedata]() {
+        window.set_finalizer([&thumbnail_manager, &search_manager, &tabs, &savedata]() {
             for(auto& layout : tabs.get_data()) {
                 auto tabdata = TabData();
                 layout.visit([&tabdata](auto& layout) {
@@ -227,6 +227,9 @@ class Browser {
             }
             savedata.tabs_index = tabs.get_index();
             save_savedata(std::move(savedata));
+
+            thumbnail_manager.shutdown();
+            search_manager.shutdown();
         });
 
         app.run();

@@ -27,6 +27,13 @@ class SearchManager {
         return count;
     }
 
+    auto shutdown() -> void {
+        if(!std::exchange(worker_exit, true)) {
+            worker_event.wakeup();
+            worker.join();
+        }
+    }
+
     SearchManager(const std::function<bool(size_t)> confirm, const std::function<void(size_t, std::vector<hitomi::GalleryID>)> done) {
         worker = std::thread([this, confirm, done]() {
             while(!worker_exit) {
@@ -48,8 +55,6 @@ class SearchManager {
     }
 
     ~SearchManager() {
-        worker_exit = true;
-        worker_event.wakeup();
-        worker.join();
+        shutdown();
     }
 };
