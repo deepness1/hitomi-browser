@@ -20,8 +20,25 @@ class ThumbnailManager {
   private:
     Critical<Caches>           critical_caches;
     Event                      workers_event;
-    bool                       workers_exit = false;
+    bool                       workers_exit    = false;
+    bool                       do_cache_adjust = false;
     std::array<std::thread, 8> workers;
+
+    static auto adjust_cache(Caches& caches) -> void {
+        auto& data   = caches.data;
+        auto& source = caches.source;
+
+        auto filtered_data = decltype(Caches::data)();
+        auto queue         = std::vector<hitomi::GalleryID>();
+        for(const auto id : source) {
+            if(auto p = data.find(id); p != data.end()) {
+                filtered_data[id] = std::move(p->second);
+            } else {
+                queue.emplace_back(id);
+            }
+        }
+        data = std::move(filtered_data);
+    }
 
   public:
     auto get_caches() -> Critical<Caches>& {
@@ -33,22 +50,11 @@ class ThumbnailManager {
         ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
 
         auto [lock, caches] = critical_caches.access();
-        auto& data          = caches.data;
-        auto& source        = caches.source;
+        caches.source       = std::move(ids);
 
-        source = std::move(ids);
+        // do not adjust caches here, because this thread may not have egl context
+        do_cache_adjust = true;
 
-        // adjust cache
-        auto filtered_data = decltype(Caches::data)();
-        auto queue         = std::vector<hitomi::GalleryID>();
-        for(const auto id : source) {
-            if(auto p = data.find(id); p != data.end()) {
-                filtered_data[id] = std::move(p->second);
-            } else {
-                queue.emplace_back(id);
-            }
-        }
-        data = std::move(filtered_data);
         workers_event.wakeup();
     }
 
@@ -79,6 +85,11 @@ class ThumbnailManager {
                                 data[target] = Caches::Type(Tag<CacheState>(), CacheState::Downloading);
                                 break;
                             }
+                        }
+
+                        if(do_cache_adjust) {
+                            adjust_cache(caches);
+                            do_cache_adjust = false;
                         }
                     }
                     if(target != invalid_gallery_id) {
