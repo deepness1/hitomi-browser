@@ -1,9 +1,12 @@
-[submodule "src/util"]
-	path = src/util
+[submodule "submodules/cutil-macros"]
+	path = submodules/cutil-macros
+	url = https://github.com/mojyack/cutil-macros.git
+[submodule "submodules/cutil"]
+	path = submodules/cutil
 	url = https://github.com/mojyack/cutil.git
-[submodule "src/hitomi/util"]
-	path = src/hitomi/util
-	url = https://github.com/mojyack/cutil.git
-[submodule "src/htk/util"]
-	path = src/htk/util
-	url = git@github.com:mojyack/cutil.git
+[submodule "submodules/tinyjson"]
+	path = submodules/tinyjson
+	url = https://github.com/mojyack/tinyjson.git
+[submodule "submodules/gawl"]
+	path = submodules/gawl
+	url = https://github.com/mojyack/gawl.git

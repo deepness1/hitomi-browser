@@ -1,5 +1,5 @@
 #pragma once
-#include <gawl/wayland/gawl.hpp>
+#include "gawl/color.hpp"
 
 namespace htk::theme {
 constexpr auto background  = gawl::Color{0x2e / 0xff.0p1, 0x34 / 0xff.0p1, 0x40 / 0xff.0p1, 1};

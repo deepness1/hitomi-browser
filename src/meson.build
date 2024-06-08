@@ -1,13 +1,23 @@
+subdir('gawl')
 subdir('hitomi')
+subdir('htk')
 
-browser_inc = []
-browser_dep = hitomi_dep + [dependency('fmt'), dependency('gawl', version : ['>=2.6', '<2.7']), dependency('gawl-keysym'), dependency('fontconfig')]
-browser_files = hitomi_files + files('browser.cpp')
+hbr_deps = gawl_core_deps + gawl_graphic_deps + gawl_fc_deps + hitomi_deps
 
-search_inc = []
-search_dep = hitomi_dep
-search_files = hitomi_files + files('search.cpp')
+gawl_files = gawl_core_files + gawl_graphic_files + gawl_textrender_files + gawl_polygon_files + gawl_fc_files
 
-download_inc = []
-download_dep = hitomi_dep
-download_files = hitomi_files + files('download.cpp')
+hbr_files = files(
+  'browser.cpp',
+  'imgview.cpp',
+  'main.cpp',
+  'save.cpp',
+  'search-manager.cpp',
+  'tabs.cpp',
+  'thumbnail-manager.cpp',
+  'widgets/gallery-info-display.cpp',
+  'widgets/input.cpp',
+  'widgets/layout-switcher.cpp',
+  'widgets/message.cpp',
+  'widgets/tab-list.cpp',
+  'widgets/tab.cpp',
+) + gawl_files + hitomi_files + htk_files

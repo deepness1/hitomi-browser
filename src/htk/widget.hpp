@@ -1,38 +1,30 @@
 #pragma once
-#include <gawl/wayland/gawl.hpp>
+#include "gawl/screen.hpp"
 
-#include "type.hpp"
 #include "keybind.hpp"
 
-namespace htk::widget {
-template <class W, class Screen>
-concept WidgetRefresh = requires(W& m, Screen& screen) {
-    { m.refresh(screen) } -> std::same_as<void>;
-} && gawl::concepts::Screen<Screen>;
-
-template <class W>
-concept WidgetKeyboard = requires(W& m, xkb_keycode_t key, Modifiers modifiers, xkb_state* xkb_state) {
-    { m.keyboard(key, modifiers, xkb_state) } -> std::same_as<bool>;
-};
-
+namespace htk {
 class Widget {
   private:
     gawl::Rectangle region = {{0, 0}, {0, 0}};
 
-  protected:
-    Keybinds keybinds;
-
   public:
-    auto get_region() const -> const gawl::Rectangle& {
-        return region;
+    std::vector<Keybind> keybinds;
+
+    virtual auto refresh(gawl::Screen& screen) -> void = 0;
+
+    virtual auto on_keycode(uint32_t /*key*/, Modifiers /*mods*/) -> bool {
+        return false;
     }
 
-    auto set_region(const gawl::Rectangle& new_region) -> void {
+    virtual auto set_region(const gawl::Rectangle& new_region) -> void {
         region = new_region;
     }
 
-    auto get_keybinds() -> Keybinds& {
-        return keybinds;
+    virtual auto get_region() const -> gawl::Rectangle {
+        return region;
     }
+
+    virtual ~Widget(){};
 };
-} // namespace htk::widget
+} // namespace htk

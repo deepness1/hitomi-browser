@@ -1,60 +1,39 @@
 #pragma once
 #include <queue>
+#include <thread>
 
-#include "hitomi/hitomi.hpp"
-#include "util/thread.hpp"
+#include "hitomi/type.hpp"
+#include "util/critical.hpp"
+#include "util/event.hpp"
+
+namespace sman {
+struct Job {
+    size_t      id;
+    std::string args;
+};
+
+auto confirm(size_t job_id) -> bool;
+auto done(size_t job_id, std::vector<hitomi::GalleryID> result) -> void;
+
+using ConfirmCallback = std::function<decltype(confirm)>;
+using DoneCallback    = std::function<decltype(done)>;
 
 class SearchManager {
   private:
-    struct Job {
-        size_t      id;
-        std::string args;
-    };
-
     size_t count = 0;
 
     Critical<std::queue<Job>> critical_jobs;
     std::thread               worker;
     Event                     worker_event;
-    bool                      worker_exit = false;
+    bool                      running = false;
+
+    auto worker_main(ConfirmCallback confirm, DoneCallback done) -> void;
 
   public:
-    auto search(std::string args) -> size_t {
-        auto [lock, jobs] = critical_jobs.access();
-        count += 1;
-        jobs.emplace(Job{count, std::move(args)});
-        worker_event.wakeup();
-        return count;
-    }
+    auto search(std::string args) -> size_t;
+    auto run(ConfirmCallback confirm, DoneCallback done) -> void;
+    auto shutdown() -> void;
 
-    auto shutdown() -> void {
-        if(!std::exchange(worker_exit, true)) {
-            worker_event.wakeup();
-            worker.join();
-        }
-    }
-
-    SearchManager(const std::function<bool(size_t)> confirm, const std::function<void(size_t, std::vector<hitomi::GalleryID>)> done) {
-        worker = std::thread([this, confirm, done]() {
-            while(!worker_exit) {
-                auto job = std::optional<Job>();
-                {
-                    auto [lock, jobs] = critical_jobs.access();
-                    if(!jobs.empty()) {
-                        job = std::move(jobs.front());
-                        jobs.pop();
-                    }
-                }
-                if(job && confirm(job->id)) {
-                    done(job->id, hitomi::search(job->args.data()));
-                } else {
-                    worker_event.wait();
-                }
-            }
-        });
-    }
-
-    ~SearchManager() {
-        shutdown();
-    }
+    ~SearchManager();
 };
+} // namespace sman
