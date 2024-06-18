@@ -36,6 +36,7 @@ loop:
 
     const auto download_page = pickup_image_to_download();
     if(download_page == -1) {
+        loader_event.clear();
         loader_event.wait();
         goto loop;
     }
