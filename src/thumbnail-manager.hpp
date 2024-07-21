@@ -1,11 +1,9 @@
 #pragma once
-#include <thread>
-
 #include "gawl/graphic.hpp"
 #include "gawl/wayland/window.hpp"
 #include "hitomi/work.hpp"
+#include "thread-pool.hpp"
 #include "util/critical.hpp"
-#include "util/event.hpp"
 
 namespace tman {
 struct Work {
@@ -32,10 +30,9 @@ constexpr auto invalid_gallery_id = hitomi::GalleryID(-1);
 
 class ThumbnailManager {
   private:
-    Critical<Caches>           critical_caches;
-    Event                      workers_event;
-    std::array<std::thread, 8> workers;
-    bool                       running = false;
+    Critical<Caches> critical_caches;
+    ThreadPool<8>    workers;
+    bool             running = false;
 
     auto worker_main(gawl::WaylandWindow* window) -> void;
 

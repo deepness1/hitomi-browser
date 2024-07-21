@@ -26,9 +26,8 @@ auto Callbacks::pickup_image_to_download() -> int {
     return -1;
 }
 
-auto Callbacks::loader_main(const int loader_num) -> void {
-    auto& this_loader = loaders[loader_num];
-    auto  context     = std::bit_cast<gawl::WaylandWindow*>(window)->fork_context();
+auto Callbacks::loader_main(Loader& data) -> void {
+    auto context = std::bit_cast<gawl::WaylandWindow*>(window)->fork_context();
 loop:
     if(!running) {
         return;
@@ -36,20 +35,19 @@ loop:
 
     const auto download_page = pickup_image_to_download();
     if(download_page == -1) {
-        loader_event.clear();
-        loader_event.wait();
+        loaders.event.wait();
         goto loop;
     }
 
     do {
-        this_loader.downloading_page = download_page;
+        data.downloading_page = download_page;
 
         const auto& image = work.images[download_page];
 
-        this_loader.cancel  = false;
-        const auto buffer_o = image.download(true, &this_loader.cancel);
+        data.cancel         = false;
+        const auto buffer_o = image.download(true, &data.cancel);
         if(!buffer_o) {
-            if(!this_loader.cancel) {
+            if(!data.cancel) {
                 auto [lock, cache] = critical_cache.access();
                 cache[download_page].emplace<Drawable>(Drawable(Tag<std::string>(), "failed to download image"));
             }
@@ -82,14 +80,14 @@ auto Callbacks::adjust_cache() -> void {
     const auto index_begin = std::max(0, page - cache_range);
     const auto index_end   = std::min(images_size - 1, page + cache_range);
 
-    for(auto& loader : loaders) {
-        if(loader.downloading_page == -1) {
+    for(auto& data : loader_data) {
+        if(data.downloading_page == -1) {
             continue;
         }
-        if(loader.downloading_page >= index_begin && loader.downloading_page <= index_end) {
+        if(data.downloading_page >= index_begin && data.downloading_page <= index_end) {
             continue;
         }
-        loader.cancel = true;
+        data.cancel = true;
     }
 
     auto [lock, cache] = critical_cache.access();
@@ -157,7 +155,7 @@ auto Callbacks::on_keycode(const uint32_t keycode, const gawl::ButtonState state
         const auto next = keycode == KEY_SPACE || keycode == KEY_RIGHT;
 
         page = std::clamp(page + (next ? 1 : -1) * (shift ? 10 : 1), 0, int(work.images.size()) - 1);
-        loader_event.wakeup();
+        loaders.event.notify_unblock();
         window->refresh();
         adjust_cache();
     } break;
@@ -166,7 +164,7 @@ auto Callbacks::on_keycode(const uint32_t keycode, const gawl::ButtonState state
             auto [lock, cache] = critical_cache.access();
             cache[page].emplace<std::thread::id>();
         }
-        loader_event.wakeup();
+        loaders.event.notify_unblock();
         window->refresh();
     } break;
     case KEY_Q:
@@ -179,12 +177,7 @@ auto Callbacks::on_keycode(const uint32_t keycode, const gawl::ButtonState state
 
 auto Callbacks::run() -> void {
     running = true;
-    for(auto i = 0; i < int(loaders.size()); i += 1) {
-        loaders[i] = Loader{std::thread([this, i]() {
-                                loader_main(i);
-                            }),
-                            -1, false};
-    }
+    loaders.run([this](Loader& data) { loader_main(data); });
 }
 
 Callbacks::Callbacks(hitomi::Work work, gawl::TextRender& font)
@@ -199,12 +192,9 @@ Callbacks::Callbacks(hitomi::Work work, gawl::TextRender& font)
 
 Callbacks::~Callbacks() {
     running = false;
-    for(auto& loader : loaders) {
-        loader.cancel = true;
+    for(auto& data : loaders.data) {
+        data.cancel = true;
     }
-    loader_event.wakeup();
-    for(auto& loader : loaders) {
-        loader.thread.join();
-    }
+    loaders.stop();
 }
 } // namespace imgview

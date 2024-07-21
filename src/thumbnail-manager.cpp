@@ -22,8 +22,7 @@ loop:
         }
     }
     if(target_id == invalid_gallery_id) {
-        workers_event.clear();
-        workers_event.wait();
+        workers.event.wait();
         goto loop;
     }
 
@@ -97,17 +96,12 @@ auto ThumbnailManager::get_caches() -> const Critical<Caches>& {
 
 auto ThumbnailManager::run(gawl::WaylandWindow* const window) -> void {
     running = true;
-    for(auto& w : workers) {
-        w = std::thread(&ThumbnailManager::worker_main, this, window);
-    }
+    workers.run([this, window]() { worker_main(window); });
 }
 
 auto ThumbnailManager::shutdown() -> void {
     if(std::exchange(running, false)) {
-        workers_event.wakeup();
-        for(auto& w : workers) {
-            w.join();
-        }
+        workers.stop();
     }
 }
 
@@ -129,7 +123,7 @@ auto ThumbnailManager::ref(std::span<const hitomi::GalleryID> works) -> void {
         }
     }
     if(notify) {
-        workers_event.wakeup();
+        workers.event.notify_unblock();
     }
 }
 

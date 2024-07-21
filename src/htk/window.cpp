@@ -2,8 +2,6 @@
 
 #include "gawl/application.hpp"
 #include "gawl/window.hpp"
-#include "macros/assert.hpp"
-#include "util/assert.hpp"
 #include "window.hpp"
 
 namespace htk {

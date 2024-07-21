@@ -111,7 +111,7 @@ class Node {
         const auto keys_limit = arr.read_int<uint32_t>();
         for(auto i = size_t(0); i < keys_limit; i += 1) {
             const auto key_size = arr.read_int<uint32_t>();
-            DYN_ASSERT(key_size <= 32, "too long key");
+            ASSERT(key_size <= 32, "too long key");
             keys.emplace_back(arr.read(key_size));
         }
 
@@ -189,9 +189,9 @@ auto calc_sha256(const std::string_view string) -> std::array<std::byte, 32> {
     auto buf = std::array<std::byte, 32>();
     auto md  = EVP_get_digestbyname("SHA256");
     auto ctx = EVP_MD_CTX_new();
-    DYN_ASSERT(EVP_DigestInit_ex2(ctx, md, NULL));
-    DYN_ASSERT(EVP_DigestUpdate(ctx, string.data(), string.size()));
-    DYN_ASSERT(EVP_DigestFinal_ex(ctx, std::bit_cast<unsigned char*>(buf.data()), NULL));
+    ASSERT(EVP_DigestInit_ex2(ctx, md, NULL));
+    ASSERT(EVP_DigestUpdate(ctx, string.data(), string.size()));
+    ASSERT(EVP_DigestFinal_ex(ctx, std::bit_cast<unsigned char*>(buf.data()), NULL));
     EVP_MD_CTX_free(ctx);
     return buf;
 }

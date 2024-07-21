@@ -19,7 +19,6 @@ loop:
     }
     if(!job) {
         worker_event.wait();
-        worker_event.clear();
         goto loop;
     }
     if(!confirm(job->id)) {
@@ -39,7 +38,7 @@ auto SearchManager::search(std::string args) -> size_t {
     auto [lock, jobs] = critical_jobs.access();
     count += 1;
     jobs.emplace(Job{count, std::move(args)});
-    worker_event.wakeup();
+    worker_event.notify();
     return count;
 }
 
@@ -50,7 +49,7 @@ auto SearchManager::run(const ConfirmCallback confirm, const DoneCallback done) 
 
 auto SearchManager::shutdown() -> void {
     if(std::exchange(running, false)) {
-        worker_event.wakeup();
+        worker_event.notify();
         worker.join();
     }
 }
@@ -58,5 +57,4 @@ auto SearchManager::shutdown() -> void {
 SearchManager::~SearchManager() {
     shutdown();
 }
-
 } // namespace sman
