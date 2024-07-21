@@ -42,11 +42,11 @@ class Callbacks : public gawl::WindowCallbacks {
     int font_size = 16;
 
     auto refresh() -> void override;
+    auto close() -> void override;
     auto on_keycode(uint32_t keycode, gawl::ButtonState state) -> void override;
 
     auto run() -> void;
 
     Callbacks(hitomi::Work work, gawl::TextRender& font);
-    ~Callbacks();
 };
 } // namespace imgview

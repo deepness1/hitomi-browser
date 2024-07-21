@@ -131,6 +131,15 @@ auto Callbacks::refresh() -> void {
     font->draw_fit_rect(*window, box, {1, 1, 1, 0.7}, str, font_size);
 }
 
+auto Callbacks::close() -> void {
+    running = false;
+    for(auto& data : loaders.data) {
+        data.cancel = true;
+    }
+    loaders.stop();
+    application->close_window(window);
+}
+
 auto Callbacks::on_keycode(const uint32_t keycode, const gawl::ButtonState state) -> void {
     const auto press = state == gawl::ButtonState::Press || state == gawl::ButtonState::Repeat;
 
@@ -170,7 +179,7 @@ auto Callbacks::on_keycode(const uint32_t keycode, const gawl::ButtonState state
     case KEY_Q:
     case KEY_BACKSLASH:
         system("swaymsg 'focus prev'"); // hack: closing window takes time
-        application->close_window(window);
+        close();
         break;
     }
 }
@@ -188,13 +197,5 @@ Callbacks::Callbacks(hitomi::Work work, gawl::TextRender& font)
         c.emplace<std::thread::id>();
     }
     this->work = std::move(work);
-}
-
-Callbacks::~Callbacks() {
-    running = false;
-    for(auto& data : loaders.data) {
-        data.cancel = true;
-    }
-    loaders.stop();
 }
 } // namespace imgview
