@@ -2,6 +2,7 @@
 
 #include "browser.hpp"
 #include "gawl/fc.hpp"
+#include "hitomi/hitomi.hpp"
 #include "htk/input.hpp"
 #include "imgview.hpp"
 #include "macros/unwrap.hpp"
@@ -140,6 +141,8 @@ auto HitomiBrowser::init() -> bool {
         app.run();
         exit(0);
     }
+
+    assert_b(hitomi::init_hitomi());
 
     auto savedata = save::SaveData();
     if(auto o = save::load_savedata()) {
