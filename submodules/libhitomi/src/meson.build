@@ -12,4 +12,4 @@ hitomi_files = files(
   'misc.cpp',
   'search.cpp',
   'work.cpp',
-) + tinyjson_src
+) + tinyjson_files
