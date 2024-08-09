@@ -2,8 +2,11 @@
 #include "gawl/graphic.hpp"
 #include "gawl/wayland/window.hpp"
 #include "hitomi/work.hpp"
-#include "thread-pool.hpp"
+
+#define CUTIL_NS util
 #include "util/critical.hpp"
+#include "util/thread-pool.hpp"
+#undef CUTIL_NS
 
 namespace tman {
 struct Work {
@@ -30,16 +33,16 @@ constexpr auto invalid_gallery_id = hitomi::GalleryID(-1);
 
 class ThumbnailManager {
   private:
-    Critical<Caches> critical_caches;
-    ThreadPool<8>    workers;
-    bool             running = false;
+    util::Critical<Caches> critical_caches;
+    util::ThreadPool<8>    workers;
+    bool                   running = false;
 
     auto worker_main(gawl::WaylandWindow* window) -> void;
 
   public:
     bool verbose = false;
 
-    auto get_caches() -> const Critical<Caches>&;
+    auto get_caches() -> const util::Critical<Caches>&;
     auto run(gawl::WaylandWindow* window) -> void;
     auto shutdown() -> void;
     auto ref(std::span<const hitomi::GalleryID> works) -> void;

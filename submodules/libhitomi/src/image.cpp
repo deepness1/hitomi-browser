@@ -5,7 +5,6 @@
 #include "image.hpp"
 #include "macros/unwrap.hpp"
 #include "misc.hpp"
-#include "util/assert.hpp"
 #include "util/charconv.hpp"
 #include "util/print.hpp"
 

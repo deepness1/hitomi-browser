@@ -3,8 +3,11 @@
 #include <thread>
 
 #include "hitomi/type.hpp"
+
+#define CUTIL_NS util
 #include "util/critical.hpp"
 #include "util/event.hpp"
+#undef CUTIL_NS
 
 namespace sman {
 struct Job {
@@ -22,10 +25,10 @@ class SearchManager {
   private:
     size_t count = 0;
 
-    Critical<std::queue<Job>> critical_jobs;
-    std::thread               worker;
-    Event                     worker_event;
-    bool                      running = false;
+    util::Critical<std::queue<Job>> critical_jobs;
+    std::thread                     worker;
+    util::Event                     worker_event;
+    bool                            running = false;
 
     auto worker_main(ConfirmCallback confirm, DoneCallback done) -> void;
 

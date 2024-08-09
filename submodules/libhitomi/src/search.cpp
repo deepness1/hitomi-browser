@@ -9,9 +9,8 @@
 #include "macros/unwrap.hpp"
 #include "misc.hpp"
 #include "type.hpp"
-#include "util/assert.hpp"
 #include "util/charconv.hpp"
-#include "util/misc.hpp"
+#include "util/split.hpp"
 
 namespace hitomi {
 namespace impl {
@@ -267,8 +266,8 @@ auto search(const std::span<const std::string_view> args) -> std::optional<std::
     return ret;
 }
 
-auto search(const std::string args) -> std::optional<std::vector<GalleryID>> {
-    const auto elms = split_args(args);
+auto search(const std::string_view args) -> std::optional<std::vector<GalleryID>> {
+    const auto elms = split_like_shell(args);
     return search(elms);
 }
 } // namespace hitomi

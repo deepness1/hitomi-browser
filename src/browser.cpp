@@ -7,7 +7,6 @@
 #include "imgview.hpp"
 #include "macros/unwrap.hpp"
 #include "save.hpp"
-#include "util/assert.hpp"
 #include "widgets/input.hpp"
 #include "widgets/tab.hpp"
 

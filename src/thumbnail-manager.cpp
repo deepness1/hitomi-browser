@@ -1,7 +1,6 @@
 #include "thumbnail-manager.hpp"
 #include "global.hpp"
 #include "macros/assert.hpp"
-#include "util/assert.hpp"
 
 namespace tman {
 auto ThumbnailManager::worker_main(gawl::WaylandWindow* window) -> void {
@@ -90,7 +89,7 @@ loop:
     goto loop;
 }
 
-auto ThumbnailManager::get_caches() -> const Critical<Caches>& {
+auto ThumbnailManager::get_caches() -> const util::Critical<Caches>& {
     return critical_caches;
 }
 

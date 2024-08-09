@@ -3,17 +3,20 @@
 
 #include "../htk/font.hpp"
 #include "../htk/widget.hpp"
+
+#define CUTIL_NS util
 #include "../util/critical.hpp"
 #include "../util/timer-event.hpp"
+#undef CUTIL_NS
 
 namespace htk::message {
 class Message : public Widget {
   private:
-    std::shared_ptr<Widget> child;
-    Critical<std::string>   critical_message;
-    std::thread             timer;
-    TimerEvent              timer_event;
-    Fonts*                  fonts;
+    std::shared_ptr<Widget>     child;
+    util::Critical<std::string> critical_message;
+    std::thread                 timer;
+    util::TimerEvent            timer_event;
+    Fonts*                      fonts;
 
   public:
     double height    = 32;

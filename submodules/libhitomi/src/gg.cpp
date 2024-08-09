@@ -2,7 +2,6 @@
 #include "constants.hpp"
 #include "macros/unwrap.hpp"
 #include "misc.hpp"
-#include "util/assert.hpp"
 #include "util/charconv.hpp"
 
 namespace {

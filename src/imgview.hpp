@@ -5,14 +5,17 @@
 #include "gawl/textrender.hpp"
 #include "gawl/window-callbacks.hpp"
 #include "hitomi/work.hpp"
-#include "thread-pool.hpp"
+
+#define CUTIL_NS util
 #include "util/critical.hpp"
+#include "util/thread-pool.hpp"
 #include "util/variant.hpp"
+#undef CUTIL_NS
 
 namespace imgview {
 using Graphic  = std::shared_ptr<gawl::Graphic>;
-using Drawable = Variant<Graphic, std::string>;
-using Image    = Variant<std::thread::id, Drawable>; // download_thread_id, graphic
+using Drawable = util::Variant<Graphic, std::string>;
+using Image    = util::Variant<std::thread::id, Drawable>; // download_thread_id, graphic
 
 struct Loader {
     int  downloading_page = -1;
@@ -24,15 +27,15 @@ class Callbacks : public gawl::WindowCallbacks {
     constexpr static auto cache_range = 16;
     constexpr static auto num_loaders = 8;
 
-    bool                                      running = false;
-    bool                                      shift   = false;
-    int                                       page    = 0;
-    hitomi::Work                              work;
-    Graphic                                   placeholder;
-    Critical<std::vector<Image>>              critical_cache;
-    gawl::TextRender*                         font;
-    CustomDataThreadPool<Loader, num_loaders> loaders;
-    std::array<Loader, num_loaders>           loader_data;
+    bool                                            running = false;
+    bool                                            shift   = false;
+    int                                             page    = 0;
+    hitomi::Work                                    work;
+    Graphic                                         placeholder;
+    util::Critical<std::vector<Image>>              critical_cache;
+    gawl::TextRender*                               font;
+    util::CustomDataThreadPool<Loader, num_loaders> loaders;
+    std::array<Loader, num_loaders>                 loader_data;
 
     auto pickup_image_to_download() -> int;
     auto loader_main(Loader& data) -> void;

@@ -10,7 +10,6 @@
 #include "macros/assert.hpp"
 #include "macros/autoptr.hpp"
 #include "misc.hpp"
-#include "util/assert.hpp"
 
 namespace {
 auto download_write_callback(const void* const p, const size_t s, const size_t n, void* const u) -> size_t {

@@ -49,7 +49,7 @@ loop:
         if(!buffer_o) {
             if(!data.cancel) {
                 auto [lock, cache] = critical_cache.access();
-                cache[download_page].emplace<Drawable>(Drawable(Tag<std::string>(), "failed to download image"));
+                cache[download_page].emplace<Drawable>(Drawable::create<std::string>("failed to download image"));
             }
             break;
         }
@@ -57,12 +57,12 @@ loop:
         const auto pixbuf_o = gawl::PixelBuffer::from_blob(*buffer_o);
         if(!pixbuf_o) {
             auto [lock, cache] = critical_cache.access();
-            cache[download_page].emplace<Drawable>(Drawable(Tag<std::string>(), "failed to load image"));
+            cache[download_page].emplace<Drawable>(Drawable::create<std::string>("failed to load image"));
             break;
         }
 
         auto [lock, cache] = critical_cache.access();
-        cache[download_page].emplace<Drawable>(Tag<Graphic>(), new gawl::Graphic(*pixbuf_o));
+        cache[download_page].emplace<Drawable>(Drawable::create<Graphic>(new gawl::Graphic(*pixbuf_o)));
         context.wait();
         break;
     } while(0);

@@ -1,6 +1,5 @@
 #pragma once
 #include "gawl/screen.hpp"
-
 #include "keybind.hpp"
 
 namespace htk {

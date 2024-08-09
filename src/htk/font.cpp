@@ -1,7 +1,6 @@
 #include "font.hpp"
 #include "gawl/fc.hpp"
 #include "macros/unwrap.hpp"
-#include "util/assert.hpp"
 
 namespace htk {
 auto find_textrender(const std::span<const char*> names, const int size) -> std::optional<gawl::TextRender> {

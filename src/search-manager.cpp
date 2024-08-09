@@ -1,6 +1,5 @@
 #include "search-manager.hpp"
 #include "hitomi/search.hpp"
-#include "util/print.hpp"
 
 namespace sman {
 auto SearchManager::worker_main(const ConfirmCallback confirm, const DoneCallback done) -> void {
