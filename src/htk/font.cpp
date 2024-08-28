@@ -9,7 +9,7 @@ auto find_textrender(const std::span<const char*> names, const int size) -> std:
         if(name[0] == '/') {
             paths.emplace_back(name);
         } else {
-            unwrap_oo(path, gawl::find_fontpath_from_name(std::string(name).data()));
+            unwrap(path, gawl::find_fontpath_from_name(std::string(name).data()));
             paths.push_back(path);
         }
     }

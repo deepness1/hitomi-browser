@@ -27,14 +27,14 @@ auto Image::download(const bool alt, bool* const cancel) const -> std::optional<
     while(true) {
         auto gg = impl::gg.access().second;
 
-        unwrap_oo(subdomain_flag, gg.get_subdomain(hash_str));
+        unwrap(subdomain_flag, gg.get_subdomain(hash_str));
         const auto subdomain_a = static_cast<char>(97 + subdomain_flag);
         const auto subdomain   = std::string{subdomain_a, 'a'};
         const auto domain      = subdomain + ".hitomi.la";
 
         auto url = std::string();
         if(alt && haswebp) {
-            unwrap_oo(hash_num, from_chars<int>(hash_str, 16));
+            unwrap(hash_num, from_chars<int>(hash_str, 16));
             url = build_string(domain, "/webp/", gg.b, "/", hash_num, "/", hash, ext);
         } else {
             url = build_string(domain, "/images/", gg.b, "/", hash_str, "/", hash, ext);
@@ -63,13 +63,13 @@ auto Image::download(const bool alt, bool* const cancel) const -> std::optional<
                 continue;
             }
         }
-        PRINT("failed to download ", base.data(), " from ", url.data());
+        line_warn("failed to download ", base.data(), " from ", url.data());
         return std::nullopt;
     }
 }
 
 auto Image::download(const std::string_view savedir, const bool alt, bool* const cancel) const -> bool {
-    unwrap_ob(buffer, download(alt, cancel));
+    unwrap(buffer, download(alt, cancel));
 
     const auto sep      = name.find(".");
     const auto base     = name.substr(0, sep);
@@ -84,9 +84,9 @@ auto Image::download(const std::string_view savedir, const bool alt, bool* const
 auto Image::init(GalleryID id, const json::Object& info) -> bool {
     this->id = id;
 
-    unwrap_pb(hash, info.find<json::String>("hash"));
+    unwrap(hash, info.find<json::String>("hash"));
     this->hash = hash.value;
-    unwrap_pb(name, info.find<json::String>("name"));
+    unwrap(name, info.find<json::String>("name"));
     this->name = name.value;
     if(const auto p = info.find<json::Number>("haswebp")) {
         this->haswebp = p->value == 1;

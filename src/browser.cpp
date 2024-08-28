@@ -12,7 +12,7 @@
 
 namespace {
 auto create_fonts() -> std::optional<htk::Fonts> {
-    unwrap_oo(font_path, gawl::find_fontpath_from_name("Noto Sans CJK JP:style=Bold"));
+    unwrap(font_path, gawl::find_fontpath_from_name("Noto Sans CJK JP:style=Bold"));
     const auto emoji_font_path = "/home/mojyack/documents/fonts/seguiemj.ttf";
     return htk::Fonts{.normal = gawl::TextRender({font_path, emoji_font_path}, 32)};
 }
@@ -37,7 +37,7 @@ auto HitomiBrowser::open_new_tab(const std::string_view title, const TabType typ
         callbacks.reset(new GallerySearchTable(tab, tman, sman));
         break;
     default:
-        PANIC();
+        panic();
     }
     auto widget = new GalleryTable();
     widget->init(fonts, std::move(callbacks));
@@ -65,7 +65,7 @@ auto HitomiBrowser::sman_confirm(size_t search_id) -> bool {
 }
 
 auto HitomiBrowser::sman_done(size_t search_id, std::vector<hitomi::GalleryID> result) -> void {
-    unwrap_pn_mut(window, window_callbacks->get_window());
+    unwrap_mut(window, window_callbacks->get_window());
 
     const auto lock = std::lock_guard(tabs.lock);
     for(auto& tab : tabs.tabs) {
@@ -77,11 +77,11 @@ auto HitomiBrowser::sman_done(size_t search_id, std::vector<hitomi::GalleryID> r
             return;
         }
     }
-    WARN("unknown search result");
+    bail("unknown search result");
 }
 
 auto HitomiBrowser::refresh_window() -> void {
-    unwrap_pn_mut(window, window_callbacks->get_window());
+    unwrap_mut(window, window_callbacks->get_window());
     window.refresh();
 }
 
@@ -132,16 +132,16 @@ auto HitomiBrowser::bookmark(std::string tab_title, const hitomi::GalleryID work
 auto HitomiBrowser::init() -> bool {
     if(false) {
         // imgview test
-        unwrap_ob_mut(fonts_, create_fonts());
+        unwrap_mut(fonts_, create_fonts());
         fonts     = std::move(fonts_);
         auto work = hitomi::Work();
-        assert_b(work.init(2495655));
+        ensure(work.init(2495655));
         open_viewer(work);
         app.run();
         exit(0);
     }
 
-    assert_b(hitomi::init_hitomi());
+    ensure(hitomi::init_hitomi());
 
     auto savedata = save::SaveData();
     if(auto o = save::load_savedata()) {
@@ -183,7 +183,7 @@ auto HitomiBrowser::init() -> bool {
     tabs.index = savedata.tabs_index;
 
     // create widgets
-    unwrap_ob_mut(fonts_, create_fonts());
+    unwrap_mut(fonts_, create_fonts());
     fonts = std::move(fonts_);
 
     info_disp.reset(new GalleryInfoDisplay(fonts, tman));
@@ -198,7 +198,7 @@ auto HitomiBrowser::init() -> bool {
             callbacks.reset(new GallerySearchTable(ptr, tman, sman));
             break;
         default:
-            PANIC();
+            panic();
         }
         auto widget = new GalleryTable();
         widget->init(fonts, std::move(callbacks));
@@ -229,7 +229,7 @@ auto HitomiBrowser::init() -> bool {
 }
 
 auto HitomiBrowser::run() -> void {
-    unwrap_pn(window, window_callbacks->get_window());
+    unwrap(window, window_callbacks->get_window());
     // tman.verbose = true;
     tman.run(std::bit_cast<gawl::WaylandWindow*>(&window));
     sman.run(std::bind(&HitomiBrowser::sman_confirm, this, std::placeholders::_1),
@@ -260,5 +260,5 @@ auto HitomiBrowser::run() -> void {
         }
     }
     savedata.tabs_index = tabs.index;
-    assert_n(save::save_savedata(savedata));
+    ensure(save::save_savedata(savedata));
 }

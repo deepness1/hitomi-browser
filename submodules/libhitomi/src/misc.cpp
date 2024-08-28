@@ -66,7 +66,7 @@ download:
             return std::nullopt;
         }
         // timeout
-        assert_o(retry < retry_limit);
+        ensure(retry < retry_limit);
         retry += 1;
         buffer.clear();
         goto download;
@@ -74,7 +74,7 @@ download:
     auto http_code = long();
     curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
     if((http_code != 200 && http_code != 206) || res == CURLE_ABORTED_BY_CALLBACK) {
-        assert_o(http_code == 503, "http code ", http_code);
+        ensure(http_code == 503, "http code ", http_code);
 
         // Service Unavailable
         std::this_thread::sleep_for(std::chrono::seconds(retry_interval));

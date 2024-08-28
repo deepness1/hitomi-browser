@@ -1,6 +1,6 @@
 #include "thumbnail-manager.hpp"
 #include "global.hpp"
-#include "macros/assert.hpp"
+#include "util/assert.hpp"
 
 namespace tman {
 auto ThumbnailManager::worker_main(gawl::WaylandWindow* window) -> void {
@@ -57,7 +57,7 @@ loop:
         }
         const auto pixbuf = gawl::PixelBuffer::from_blob(*buf);
         if(!pixbuf) {
-            WARN("failed to load thumbnail");
+            line_warn("failed to load thumbnail");
             break;
         }
         img.update_texture(*pixbuf);
@@ -112,7 +112,7 @@ auto ThumbnailManager::ref(std::span<const hitomi::GalleryID> works) -> void {
             if(const auto p = caches.refcounts.find(work); p != caches.refcounts.end()) {
                 p->second += 1;
                 if(verbose) {
-                    PRINT("ref ", work, " ", p->second);
+                    line_print("ref ", work, " ", p->second);
                 }
             } else {
                 caches.refcounts.insert({work, 1});
@@ -131,12 +131,12 @@ auto ThumbnailManager::unref(std::span<const hitomi::GalleryID> works) -> void {
     for(const auto work : works) {
         const auto p = caches.refcounts.find(work);
         if(p == caches.refcounts.end() || p->second <= 0) {
-            WARN("cache refcount bug");
+            line_warn("cache refcount bug");
             continue;
         }
         p->second -= 1;
         if(verbose) {
-            PRINT("unref ", work, " ", p->second);
+            line_print("unref ", work, " ", p->second);
         }
         if(p->second == 0) {
             caches.delete_candidates.push_back(work);

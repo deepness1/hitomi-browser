@@ -10,7 +10,7 @@ auto Work::get_display_name() const -> const std::string& {
 }
 
 auto Work::get_thumbnail() -> std::optional<std::vector<std::byte>> {
-    assert_o(!images.empty());
+    ensure(!images.empty());
     return impl::download_binary(images[0].get_thumbnail_url().data(), {.referer = impl::hitomi_referer, .timeout = 15});
 }
 
@@ -18,17 +18,11 @@ auto Work::init(const GalleryID id) -> bool {
     this->id = id;
 
     const auto url = build_string(impl::galleries_url, "/", id, ".js");
-    unwrap_ob(buffer, impl::download_binary(url, {.referer = impl::hitomi_referer}));
+    unwrap(buffer, impl::download_binary(url, {.referer = impl::hitomi_referer}));
     const auto json_head = std::find(buffer.begin(), buffer.end(), std::byte('='));
-    assert_b(json_head != buffer.end(), "invalid json");
+    ensure(json_head != buffer.end(), "invalid json");
     const auto json_str = std::string_view(std::bit_cast<char*>(json_head + 1), std::bit_cast<char*>(buffer.end()));
-    const auto json_r   = json::parse(json_str);
-    if(!json_r) {
-        WARN(json_r.as_error().cstr());
-        WARN("json:", json_str);
-        return false;
-    }
-    const auto& json = json_r.as_value();
+    unwrap(json, json::parse(json_str), "failed to parse json: ", json_str);
     for(auto& [key, value] : json.children) {
         if(key == "title" && value.get_index() == json::Value::index_of<json::String>) {
             title = value.as<json::String>().value;
@@ -41,8 +35,8 @@ auto Work::init(const GalleryID id) -> bool {
         } else if(key == "tags" && value.get_index() == json::Value::index_of<json::Array>) {
             auto& array = value.as<json::Array>().value;
             for(const auto& t : array) {
-                unwrap_pb(obj, t.get<json::Object>());
-                unwrap_pb(tag, obj.find<json::String>("tag"));
+                unwrap(obj, t.get<json::Object>());
+                unwrap(tag, obj.find<json::String>("tag"));
                 auto tag_str = tag.value;
 
                 const auto is_one = [](const json::Value& v) -> bool {
@@ -51,7 +45,7 @@ auto Work::init(const GalleryID id) -> bool {
                     } else if(const auto q = v.get<json::Number>()) {
                         return q->value == 1;
                     } else {
-                        WARN("unknown tag");
+                        line_warn("unknown tag");
                         return false;
                     }
                 };
@@ -66,9 +60,9 @@ auto Work::init(const GalleryID id) -> bool {
         } else if(key == "files" && value.get_index() == json::Value::index_of<json::Array>) {
             auto& array = value.as<json::Array>().value;
             for(const auto& i : array) {
-                unwrap_pb(obj, i.get<json::Object>());
+                unwrap(obj, i.get<json::Object>());
                 auto image = Image();
-                assert_b(image.init(id, obj));
+                ensure(image.init(id, obj));
                 images.emplace_back(std::move(image));
             }
         } else if(key == "type" && value.get_index() == json::Value::index_of<json::String>) {
@@ -76,7 +70,7 @@ auto Work::init(const GalleryID id) -> bool {
         } else if(key == "artists" && value.get_index() == json::Value::index_of<json::Array>) {
             auto& array = value.as<json::Array>().value;
             for(const auto& a : array) {
-                unwrap_pb(obj, a.get<json::Object>());
+                unwrap(obj, a.get<json::Object>());
                 if(const auto v = obj.find<json::String>("artist")) {
                     artists.emplace_back(v->value);
                 }
@@ -84,7 +78,7 @@ auto Work::init(const GalleryID id) -> bool {
         } else if(key == "groups" && value.get_index() == json::Value::index_of<json::Array>) {
             auto& array = value.as<json::Array>().value;
             for(auto& g : array) {
-                unwrap_pb(obj, g.get<json::Object>());
+                unwrap(obj, g.get<json::Object>());
                 if(const auto v = obj.find<json::String>("group")) {
                     groups.emplace_back(v->value);
                 }
@@ -92,7 +86,7 @@ auto Work::init(const GalleryID id) -> bool {
         } else if(key == "parodys" && value.get_index() == json::Value::index_of<json::Array>) {
             auto& array = value.as<json::Array>().value;
             for(auto& p : array) {
-                unwrap_pb(obj, p.get<json::Object>());
+                unwrap(obj, p.get<json::Object>());
                 if(const auto v = obj.find<json::String>("parody")) {
                     series.emplace_back(v->value);
                 }

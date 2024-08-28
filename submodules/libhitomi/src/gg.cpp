@@ -24,13 +24,13 @@ auto extract_string(const std::string_view str, const std::string_view begin_mar
 
 namespace hitomi::impl {
 auto GG::get_subdomain(const std::string_view hash) -> std::optional<bool> {
-    assert_o(hash.size() == 3);
-    unwrap_oo(hash_num, from_chars<int>(hash, 16));
+    ensure(hash.size() == 3);
+    unwrap(hash_num, from_chars<int>(hash, 16));
     return subdomain_table[hash_num];
 }
 
 auto GG::update() -> bool {
-    unwrap_ob(js, download_binary(gg_url, {.referer = hitomi_referer}));
+    unwrap(js, download_binary(gg_url, {.referer = hitomi_referer}));
     const auto str             = std::string_view(std::bit_cast<char*>(js.data()), js.size());
     const auto default_o       = extract_string(str, "var o = ", ";") == "1";
     auto       subdomain_table = std::array<bool, 0x1000>();
