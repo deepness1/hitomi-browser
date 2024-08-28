@@ -112,9 +112,12 @@ auto ThumbnailManager::ref(std::span<const hitomi::GalleryID> works) -> void {
             if(const auto p = caches.refcounts.find(work); p != caches.refcounts.end()) {
                 p->second += 1;
                 if(verbose) {
-                    line_print("ref ", work, " ", p->second);
+                    print("ref ", work, " ", p->second);
                 }
             } else {
+                if(verbose) {
+                    print("ref ", work, " 1(new)");
+                }
                 caches.refcounts.insert({work, 1});
                 caches.create_candidates.push_back(work);
                 notify = true;
@@ -136,7 +139,7 @@ auto ThumbnailManager::unref(std::span<const hitomi::GalleryID> works) -> void {
         }
         p->second -= 1;
         if(verbose) {
-            line_print("unref ", work, " ", p->second);
+            print("unref ", work, " ", p->second);
         }
         if(p->second == 0) {
             caches.delete_candidates.push_back(work);
