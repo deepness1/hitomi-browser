@@ -13,11 +13,18 @@ loop:
     auto target_id = invalid_gallery_id;
     {
         auto [lock, caches] = critical_caches.access();
-        auto& cands         = caches.create_candidates;
+        if(verbose) {
+            print("cache: ", caches.works.size(), " refcounts: ", caches.refcounts.size(), " create: ", caches.create_candidates.size(), " delete: ", caches.delete_candidates.size());
+        }
+        auto& cands = caches.create_candidates;
         if(!cands.empty()) {
             target_id = cands[0];
             cands.erase(cands.begin());
-            caches.works.insert({target_id, Work{.state = Work::State::Init, .work = {}, .thumbnail = {}}});
+            if(!caches.works.contains(target_id)) {
+                caches.works.insert({target_id, Work{.state = Work::State::Init, .work = {}, .thumbnail = {}}});
+            } else {
+                target_id = invalid_gallery_id;
+            }
         }
     }
     if(target_id == invalid_gallery_id) {
@@ -82,7 +89,9 @@ loop:
 
         // clear cache
         for(auto work : std::exchange(caches.delete_candidates, {})) {
-            caches.works.erase(work);
+            if(!caches.refcounts.contains(work)) {
+                caches.works.erase(work);
+            }
         }
     }
 

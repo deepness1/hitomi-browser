@@ -175,4 +175,5 @@ auto GallerySearchTable::erase(const size_t /*index*/) -> bool {
 
 GallerySearchTable::GallerySearchTable(std::shared_ptr<Tab> data, tman::ThumbnailManager& tman, sman::SearchManager& sman)
     : GalleryTableCallbacks(std::move(data), tman),
-      sman(&sman) {}
+      sman(&sman) {
+}
