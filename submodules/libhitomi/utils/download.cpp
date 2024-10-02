@@ -6,7 +6,6 @@
 #include "hitomi/type.hpp"
 #include "hitomi/work.hpp"
 #include "macros/unwrap.hpp"
-#include "util/assert.hpp"
 #include "util/charconv.hpp"
 
 namespace {
@@ -28,16 +27,16 @@ auto parse_args(const int argc, const char* const argv[]) -> std::optional<Args>
         } else if(arg == "-w" || arg == "--webp") {
             res.webp = true;
         } else if(arg == "-o" || arg == "--output") {
-            assert_o(i + 1 < argc);
+            ensure(i + 1 < argc);
             res.save_dir = argv[i + 1];
             i += 1;
         } else if(arg == "-j" || arg == "--jobs") {
-            assert_o(i + 1 < argc);
-            unwrap_oo(num, from_chars<size_t>(argv[i + 1]));
+            ensure(i + 1 < argc);
+            unwrap(num, from_chars<size_t>(argv[i + 1]));
             res.threads = num;
             i += 1;
         } else {
-            unwrap_oo(num, from_chars<hitomi::GalleryID>(arg));
+            unwrap(num, from_chars<hitomi::GalleryID>(arg));
             res.ids.push_back(num);
         }
     }
@@ -72,7 +71,7 @@ auto build_save_dir(const hitomi::Work& work) -> std::string {
 }
 
 auto download(const hitomi::Work& work, const std::string_view savedir, const size_t num_threads, const bool webp) -> bool {
-    assert_b(std::filesystem::exists(savedir) || std::filesystem::create_directories(savedir));
+    ensure(std::filesystem::exists(savedir) || std::filesystem::create_directories(savedir));
 
     auto index      = size_t(0);
     auto index_lock = std::mutex();
@@ -109,18 +108,18 @@ auto download(const hitomi::Work& work, const std::string_view savedir, const si
 } // namespace
 
 auto main(const int argc, const char* const argv[]) -> int {
-    unwrap_ov(args, parse_args(argc, argv), const, 1);
+    unwrap(args, parse_args(argc, argv));
     if(args.help) {
         printf(help_text);
         return 0;
     }
-    assert_v(args.threads > 0, 1);
-    assert_v(!args.ids.empty(), 1);
+    ensure(args.threads > 0);
+    ensure(!args.ids.empty());
 
     hitomi::init_hitomi();
     for(const auto id : args.ids) {
         auto work = hitomi::Work();
-        assert_v(work.init(id), 1);
+        ensure(work.init(id));
         print(work.get_display_name());
         const auto savedir = std::filesystem::path(args.save_dir) / build_save_dir(work);
         while(true) {
