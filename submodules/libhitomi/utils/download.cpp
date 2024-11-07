@@ -1,57 +1,18 @@
 #include <filesystem>
 #include <string>
-#include <thread>
+
+#include <coop/generator.hpp>
+#include <coop/parallel.hpp>
+#include <coop/promise.hpp>
+#include <coop/thread.hpp>
 
 #include "hitomi/hitomi.hpp"
 #include "hitomi/type.hpp"
 #include "hitomi/work.hpp"
-#include "macros/unwrap.hpp"
-#include "util/charconv.hpp"
+#include "macros/assert.hpp"
+#include "util/argument-parser.hpp"
 
 namespace {
-struct Args {
-    bool                           webp     = false;
-    bool                           help     = false;
-    size_t                         threads  = 8;
-    std::string_view               save_dir = "downloads";
-    std::vector<hitomi::GalleryID> ids;
-};
-
-auto parse_args(const int argc, const char* const argv[]) -> std::optional<Args> {
-    auto res = Args();
-
-    for(auto i = 1; i < argc; i += 1) {
-        auto arg = std::string_view(argv[i]);
-        if(arg == "-h" || arg == "--help") {
-            res.help = true;
-        } else if(arg == "-w" || arg == "--webp") {
-            res.webp = true;
-        } else if(arg == "-o" || arg == "--output") {
-            ensure(i + 1 < argc);
-            res.save_dir = argv[i + 1];
-            i += 1;
-        } else if(arg == "-j" || arg == "--jobs") {
-            ensure(i + 1 < argc);
-            unwrap(num, from_chars<size_t>(argv[i + 1]));
-            res.threads = num;
-            i += 1;
-        } else {
-            unwrap(num, from_chars<hitomi::GalleryID>(arg));
-            res.ids.push_back(num);
-        }
-    }
-
-    return res;
-}
-
-constexpr auto help_text =
-    R"(Usage: download [options] IDs ...
-Options:
-    -h, --help          Print this help
-    -w, --webp          Download webp compressed images if possible
-    -o, --output DIR    Specify output directory [default="./downloads"]
-    -j, --jobs N        Download N files in parallel [default=8])";
-
 auto canonicalize_filename(std::string& str) -> void {
     for(auto& c : str) {
         if(c == '/') {
@@ -70,64 +31,64 @@ auto build_save_dir(const hitomi::Work& work) -> std::string {
     return dir.size() < 256 ? dir : id_str;
 }
 
-auto download(const hitomi::Work& work, const std::string_view savedir, const size_t num_threads, const bool webp) -> bool {
-    ensure(std::filesystem::exists(savedir) || std::filesystem::create_directories(savedir));
+auto task_main(const int argc, const char* const* argv) -> coop::Async<bool> {
+    constexpr auto error_value = false;
 
-    auto index      = size_t(0);
-    auto index_lock = std::mutex();
-    auto workers    = std::vector<std::thread>(num_threads);
-    auto error      = false;
+    auto id       = hitomi::GalleryID();
+    auto webp     = false;
+    auto help     = false;
+    auto threads  = size_t(8);
+    auto save_dir = "downloads";
+    {
+        auto parser = args::Parser<hitomi::GalleryID, size_t>();
+        parser.arg(&id, "ID", "numeric gallery id");
+        parser.kwarg(&save_dir, {"-o", "--output"}, "PATH", "Output directory", {.state = args::State::DefaultValue});
+        parser.kwarg(&threads, {"-j", "--jobs"}, "N", "Download N files in parallel", {.state = args::State::DefaultValue});
+        parser.kwflag(&webp, {"-w", "--webp"}, "Download webp compressed images if possible");
+        parser.kwflag(&help, {"-h", "--help"}, "Print this help message", {.no_error_check = true});
+        if(!parser.parse(argc, argv) || help) {
+            print("Usage: download ", parser.get_help());
+            co_return true;
+        }
+    }
+    co_ensure_v(hitomi::init_hitomi());
+    auto work = hitomi::Work();
+    co_ensure_v(work.init(id));
+    print(work.get_display_name());
+    const auto fullpath = std::filesystem::path(save_dir) / build_save_dir(work);
+    co_ensure_v(std::filesystem::exists(fullpath) || std::filesystem::create_directories(fullpath));
 
-    for(auto& worker : workers) {
-        worker = std::thread([&]() {
-            while(true) {
-                auto i = uint64_t();
-                {
-                    const auto lock = std::lock_guard<std::mutex>(index_lock);
-                    if(index < work.images.size()) {
-                        i = index;
-                        index += 1;
-                    } else {
-                        break;
-                    }
-                }
-                auto& image = work.images[i];
-                image.download(webp);
-                if(!image.download(savedir, webp)) {
-                    error = true;
-                }
+    // download
+    auto index   = size_t(0);
+    auto workers = std::vector<coop::Async<bool>>(threads);
+
+    const auto worker = [](const hitomi::Work& work, const std::string_view savedir, const bool webp, size_t& index) -> coop::Async<bool> {
+        while(true) {
+            const auto page = index;
+            if(index < work.images.size()) {
+                index += 1;
+            } else {
+                break;
             }
-        });
+            auto& image = work.images[page];
+            if(!co_await coop::run_blocking([&]() {image.download(savedir, webp); return true; })) {
+                line_warn("failed to download page ", page);
+            }
+        }
+        co_return true;
+    };
+    for(auto i = 0u; i < threads; i += 1) {
+        workers.emplace_back(worker(work, fullpath.string(), webp, index));
     }
-    for(auto& w : workers) {
-        w.join();
-    }
-    return true;
-}
 
+    co_await coop::run_vec(std::move(workers));
+    co_return true;
+}
 } // namespace
 
 auto main(const int argc, const char* const argv[]) -> int {
-    unwrap(args, parse_args(argc, argv));
-    if(args.help) {
-        printf(help_text);
-        return 0;
-    }
-    ensure(args.threads > 0);
-    ensure(!args.ids.empty());
-
-    hitomi::init_hitomi();
-    for(const auto id : args.ids) {
-        auto work = hitomi::Work();
-        ensure(work.init(id));
-        print(work.get_display_name());
-        const auto savedir = std::filesystem::path(args.save_dir) / build_save_dir(work);
-        while(true) {
-            if(download(work, savedir.string(), args.threads, args.webp)) {
-                break;
-            }
-        }
-    }
-    hitomi::finish_hitomi();
+    auto runner = coop::Runner();
+    runner.push_task(task_main(argc, argv));
+    runner.run();
     return 0;
 }
