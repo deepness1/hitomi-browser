@@ -1,56 +1,46 @@
-#include "search-manager.hpp"
+#include <coop/parallel.hpp>
+#include <coop/promise.hpp>
+#include <coop/runner.hpp>
+#include <coop/thread.hpp>
+
 #include "hitomi/search.hpp"
+#include "search-manager.hpp"
 
 namespace sman {
-auto SearchManager::worker_main(const ConfirmCallback confirm, const DoneCallback done) -> void {
+auto SearchManager::worker_main(const ConfirmCallback confirm, const DoneCallback done) -> coop::Async<void> {
 loop:
-    if(!running) {
-        return;
-    }
-
-    auto job = std::optional<Job>();
-    {
-        auto [lock, jobs] = critical_jobs.access();
-        if(!jobs.empty()) {
-            job = std::move(jobs.front());
-            jobs.pop();
-        }
-    }
-    if(!job) {
-        worker_event.wait();
+    if(jobs.empty()) {
+        co_await worker_event;
         goto loop;
     }
-    if(!confirm(job->id)) {
+    auto job = std::move(jobs.front());
+    jobs.pop();
+    if(!confirm(job.id)) {
         goto loop;
     }
 
-    const auto ret = hitomi::search(job->args.data());
+    const auto ret = co_await coop::run_blocking([&job]() { return hitomi::search(job.args); });
     if(ret) {
-        done(job->id, ret.value());
+        done(job.id, ret.value());
     } else {
-        done(job->id, {});
+        done(job.id, {});
     }
     goto loop;
 }
 
 auto SearchManager::search(std::string args) -> size_t {
-    auto [lock, jobs] = critical_jobs.access();
     count += 1;
     jobs.emplace(Job{count, std::move(args)});
     worker_event.notify();
     return count;
 }
 
-auto SearchManager::run(const ConfirmCallback confirm, const DoneCallback done) -> void {
-    running = true;
-    worker  = std::thread(&SearchManager::worker_main, this, confirm, done);
+auto SearchManager::run(const ConfirmCallback confirm, const DoneCallback done) -> coop::Async<void> {
+    co_await coop::run_args(worker_main(confirm, done)).detach({&worker});
 }
 
 auto SearchManager::shutdown() -> void {
-    if(std::exchange(running, false)) {
-        worker_event.notify();
-        worker.join();
-    }
+    worker.cancel();
 }
 
 SearchManager::~SearchManager() {

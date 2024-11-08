@@ -1,13 +1,10 @@
 #pragma once
 #include <queue>
-#include <thread>
+
+#include <coop/generator.hpp>
+#include <coop/single-event.hpp>
 
 #include "hitomi/type.hpp"
-
-#define CUTIL_NS util
-#include "util/critical.hpp"
-#include "util/event.hpp"
-#undef CUTIL_NS
 
 namespace sman {
 struct Job {
@@ -25,16 +22,15 @@ class SearchManager {
   private:
     size_t count = 0;
 
-    util::Critical<std::queue<Job>> critical_jobs;
-    std::thread                     worker;
-    util::Event                     worker_event;
-    bool                            running = false;
+    std::queue<Job>   jobs;
+    coop::TaskHandle  worker;
+    coop::SingleEvent worker_event;
 
-    auto worker_main(ConfirmCallback confirm, DoneCallback done) -> void;
+    auto worker_main(ConfirmCallback confirm, DoneCallback done) -> coop::Async<void>;
 
   public:
     auto search(std::string args) -> size_t;
-    auto run(ConfirmCallback confirm, DoneCallback done) -> void;
+    auto run(ConfirmCallback confirm, DoneCallback done) -> coop::Async<void>;
     auto shutdown() -> void;
 
     ~SearchManager();
