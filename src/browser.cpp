@@ -107,9 +107,8 @@ auto HitomiBrowser::search_in_new_tab(std::string args) -> void {
 }
 
 auto HitomiBrowser::open_viewer(hitomi::Work work) -> void {
-    const auto callbacks = new imgview::Callbacks(std::move(work), fonts.normal);
-    app.open_window({.title = "viewer", .manual_refresh = true}, std::shared_ptr<imgview::Callbacks>(callbacks));
-    callbacks->run();
+    const auto callbacks = std::shared_ptr<imgview::Callbacks>(new imgview::Callbacks(std::move(work), fonts.normal));
+    runner.push_task(app.run(), app.open_window({.manual_refresh = true}, callbacks));
 }
 
 auto HitomiBrowser::bookmark(std::string tab_title, const hitomi::GalleryID work) -> void {
@@ -137,7 +136,7 @@ auto HitomiBrowser::init() -> bool {
         auto work = hitomi::Work();
         ensure(work.init(2495655));
         open_viewer(work);
-        app.run();
+        runner.run();
         exit(0);
     }
 
@@ -221,24 +220,39 @@ auto HitomiBrowser::init() -> bool {
     message.reset(new htk::message::Message(fonts, modal));
 
     // open window
-    window_callbacks.reset(new htk::Callbacks(message));
-    app.open_window({.title = "hitomi-browser", .manual_refresh = true}, window_callbacks);
+    class WindowCallbacks : public htk::Callbacks {
+      private:
+        HitomiBrowser& browser;
+
+      public:
+        auto close() -> void {
+            browser.sman.shutdown();
+            browser.tman.shutdown();
+            htk::Callbacks::close();
+        }
+
+        auto on_created(gawl::Window* window) -> coop::Async<bool> {
+            browser.tman.run(std::bit_cast<gawl::WaylandWindow*>(window));
+            browser.sman.run(std::bind(&HitomiBrowser::sman_confirm, &browser, std::placeholders::_1),
+                             std::bind(&HitomiBrowser::sman_done, &browser, std::placeholders::_1, std::placeholders::_2));
+
+            co_return true;
+        }
+
+        WindowCallbacks(std::shared_ptr<htk::Widget> root, HitomiBrowser& browser)
+            : htk::Callbacks(std::move(root)),
+              browser(browser) {}
+    };
 
     browser = this;
+    window_callbacks.reset(new WindowCallbacks(message, *this));
+    runner.push_task(app.run(), app.open_window({.title = "hitomi-browser", .manual_refresh = true}, window_callbacks));
+
     return true;
 }
 
 auto HitomiBrowser::run() -> void {
-    unwrap(window, window_callbacks->get_window());
-    // tman.verbose = true;
-    tman.run(std::bit_cast<gawl::WaylandWindow*>(&window));
-    sman.run(std::bind(&HitomiBrowser::sman_confirm, this, std::placeholders::_1),
-             std::bind(&HitomiBrowser::sman_done, this, std::placeholders::_1, std::placeholders::_2));
-
-    app.run();
-
-    sman.shutdown();
-    tman.shutdown();
+    runner.run();
 
     // save
     auto savedata                        = save::SaveData();

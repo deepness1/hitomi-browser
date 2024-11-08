@@ -1,5 +1,5 @@
 #pragma once
-#include <thread>
+#include <coop/multi-event.hpp>
 
 #include "gawl/graphic.hpp"
 #include "gawl/textrender.hpp"
@@ -7,19 +7,17 @@
 #include "hitomi/work.hpp"
 
 #define CUTIL_NS util
-#include "util/critical.hpp"
-#include "util/thread-pool.hpp"
 #include "util/variant.hpp"
 #undef CUTIL_NS
 
 namespace imgview {
 using Graphic  = std::shared_ptr<gawl::Graphic>;
 using Drawable = util::Variant<Graphic, std::string>;
-using Image    = util::Variant<std::thread::id, Drawable>; // download_thread_id, graphic
 
 struct Loader {
-    int  downloading_page = -1;
-    bool cancel           = false;
+    coop::TaskHandle handle;
+    int              downloading_page = -1;
+    bool             cancel           = false;
 };
 
 class Callbacks : public gawl::WindowCallbacks {
@@ -27,18 +25,17 @@ class Callbacks : public gawl::WindowCallbacks {
     constexpr static auto cache_range = 16;
     constexpr static auto num_loaders = 8;
 
-    bool                                            running = false;
-    bool                                            shift   = false;
-    int                                             page    = 0;
-    hitomi::Work                                    work;
-    Graphic                                         placeholder;
-    util::Critical<std::vector<Image>>              critical_cache;
-    gawl::TextRender*                               font;
-    util::CustomDataThreadPool<Loader, num_loaders> loaders;
-    std::array<Loader, num_loaders>                 loader_data;
+    int                                  page  = 0;
+    bool                                 shift = false;
+    hitomi::Work                         work;
+    Graphic                              placeholder;
+    std::vector<std::optional<Drawable>> cache;
+    gawl::TextRender*                    font;
+    coop::MultiEvent                     loaders_event;
+    std::array<Loader, num_loaders>      loaders;
 
     auto pickup_image_to_download() -> int;
-    auto loader_main(Loader& data) -> void;
+    auto loader_main(Loader& data) -> coop::Async<void>;
     auto adjust_cache() -> void;
 
   public:
@@ -46,9 +43,8 @@ class Callbacks : public gawl::WindowCallbacks {
 
     auto refresh() -> void override;
     auto close() -> void override;
-    auto on_keycode(uint32_t keycode, gawl::ButtonState state) -> void override;
-
-    auto run() -> void;
+    auto on_created(gawl::Window* window) -> coop::Async<bool> override;
+    auto on_keycode(uint32_t keycode, gawl::ButtonState state) -> coop::Async<bool> override;
 
     Callbacks(hitomi::Work work, gawl::TextRender& font);
 };

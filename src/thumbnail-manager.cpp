@@ -67,7 +67,7 @@ loop:
             line_warn("failed to load thumbnail");
             break;
         }
-        img.update_texture(*pixbuf);
+        img = gawl::Graphic(*pixbuf);
         context.wait();
     } while(0);
     if(!img) {

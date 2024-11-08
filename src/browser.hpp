@@ -14,6 +14,7 @@ class HitomiBrowser : public Browser {
     tman::ThumbnailManager   tman;
     sman::SearchManager      sman;
     htk::Fonts               fonts;
+    coop::Runner             runner;
 
     std::vector<htk::Keybind> tab_keybinds;
     std::vector<htk::Keybind> tab_list_keybinds;

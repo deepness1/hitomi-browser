@@ -1,5 +1,8 @@
 #include <linux/input.h>
 
+#include <coop/parallel.hpp>
+#include <coop/thread.hpp>
+
 #include "gawl/application.hpp"
 #include "gawl/misc.hpp"
 #include "gawl/wayland/window.hpp"
@@ -13,29 +16,22 @@ auto Callbacks::pickup_image_to_download() -> int {
     const auto index_begin = std::max(0, page - cache_range);
     const auto index_end   = std::min(images_size - 1, page + cache_range);
 
-    auto [lock, cache] = critical_cache.access();
     for(auto i = index_begin; i <= index_end; i += 1) {
-        const auto tid = cache[i].get<std::thread::id>();
-        if(tid == nullptr || *tid != std::thread::id()) {
+        if(cache[i]) {
             continue;
         }
-        *tid = std::this_thread::get_id();
+        *cache[i] = Drawable();
         return i;
     }
 
     return -1;
 }
 
-auto Callbacks::loader_main(Loader& data) -> void {
-    auto context = std::bit_cast<gawl::WaylandWindow*>(window)->fork_context();
+auto Callbacks::loader_main(Loader& data) -> coop::Async<void> {
 loop:
-    if(!running) {
-        return;
-    }
-
     const auto download_page = pickup_image_to_download();
     if(download_page == -1) {
-        loaders.event.wait();
+        co_await loaders_event;
         goto loop;
     }
 
@@ -45,25 +41,28 @@ loop:
         const auto& image = work.images[download_page];
 
         data.cancel         = false;
-        const auto buffer_o = image.download(true, &data.cancel);
+        const auto buffer_o = co_await coop::run_blocking([&image, &data]() { return image.download(true, &data.cancel); });
         if(!buffer_o) {
             if(!data.cancel) {
-                auto [lock, cache] = critical_cache.access();
                 cache[download_page].emplace<Drawable>(Drawable::create<std::string>("failed to download image"));
             }
             break;
         }
 
-        const auto pixbuf_o = gawl::PixelBuffer::from_blob(*buffer_o);
+        const auto pixbuf_o = co_await coop::run_blocking([&buffer_o]() { return gawl::PixelBuffer::from_blob(*buffer_o); });
         if(!pixbuf_o) {
-            auto [lock, cache] = critical_cache.access();
             cache[download_page].emplace<Drawable>(Drawable::create<std::string>("failed to load image"));
             break;
         }
 
-        auto [lock, cache] = critical_cache.access();
-        cache[download_page].emplace<Drawable>(Drawable::create<Graphic>(new gawl::Graphic(*pixbuf_o)));
-        context.wait();
+        auto graphic = Drawable::create<Graphic>(co_await coop::run_blocking([this, &pixbuf_o]() {
+            auto context = std::bit_cast<gawl::WaylandWindow*>(window)->fork_context();
+            auto graph   = new gawl::Graphic(*pixbuf_o);
+            context.wait();
+            return graph;
+        }));
+
+        cache[download_page] = std::move(graphic);
         break;
     } while(0);
 
@@ -76,26 +75,20 @@ loop:
 
 auto Callbacks::adjust_cache() -> void {
     const auto images_size = int(work.images.size());
-
     const auto index_begin = std::max(0, page - cache_range);
     const auto index_end   = std::min(images_size - 1, page + cache_range);
 
-    for(auto& data : loader_data) {
-        if(data.downloading_page == -1) {
-            continue;
+    for(auto& loader : loaders) {
+        if(loader.downloading_page < index_begin || loader.downloading_page > index_end) {
+            loader.cancel = true;
         }
-        if(data.downloading_page >= index_begin && data.downloading_page <= index_end) {
-            continue;
-        }
-        data.cancel = true;
     }
 
-    auto [lock, cache] = critical_cache.access();
     for(auto i = 0; i < index_begin; i += 1) {
-        cache[i].emplace<std::thread::id>();
+        cache[i].reset();
     }
     for(auto i = index_end + 1; i < images_size; i += 1) {
-        cache[i].emplace<std::thread::id>();
+        cache[i].reset();
     }
 }
 
@@ -105,16 +98,16 @@ auto Callbacks::refresh() -> void {
     const auto [screen_width, screen_height] = window->get_window_size();
     const auto screen_rect                   = gawl::Rectangle{{0, 0}, {1. * screen_width, 1. * screen_height}};
 
-    auto [lock, cache] = critical_cache.access();
-    auto& image        = cache[page];
-    if(const auto drawable = image.get<Drawable>(); drawable != nullptr) {
-        switch(drawable->get_index()) {
+    auto& image = cache[page];
+    if(image) {
+        auto& drawable = *image;
+        switch(drawable.get_index()) {
         case Drawable::index_of<Graphic>:
-            placeholder = drawable->as<Graphic>();
+            placeholder = drawable.as<Graphic>();
             placeholder->draw_fit_rect(*window, screen_rect);
             break;
         case Drawable::index_of<std::string>:
-            font->draw_fit_rect(*window, screen_rect, {1, 1, 1, 1}, drawable->as<std::string>(), font_size);
+            font->draw_fit_rect(*window, screen_rect, {1, 1, 1, 1}, drawable.as<std::string>(), font_size);
             break;
         }
     } else {
@@ -132,29 +125,40 @@ auto Callbacks::refresh() -> void {
 }
 
 auto Callbacks::close() -> void {
-    running = false;
-    for(auto& data : loaders.data) {
-        data.cancel = true;
+    for(auto& loader : loaders) {
+        loader.cancel = true;
+        loader.handle.cancel();
     }
-    loaders.stop();
     application->close_window(window);
 }
 
-auto Callbacks::on_keycode(const uint32_t keycode, const gawl::ButtonState state) -> void {
+auto Callbacks::on_created(gawl::Window* /*window*/) -> coop::Async<bool> {
+    auto workers = std::vector<coop::Async<void>>(num_loaders);
+    auto handles = std::vector<coop::TaskHandle*>(num_loaders);
+    for(auto i = 0u; i < num_loaders; i += 1) {
+        auto& loader = loaders[i];
+        workers.emplace_back(loader_main(loader));
+        handles.emplace_back(&loader.handle);
+    }
+    co_await coop::run_vec(std::move(workers)).detach(std::move(handles));
+    co_return true;
+}
+
+auto Callbacks::on_keycode(const uint32_t keycode, const gawl::ButtonState state) -> coop::Async<bool> {
     const auto press = state == gawl::ButtonState::Press || state == gawl::ButtonState::Repeat;
 
     if(keycode == KEY_LEFTSHIFT || keycode == KEY_RIGHTSHIFT) {
         shift = press;
-        return;
+        co_return true;
     }
 
     if(state == gawl::ButtonState::Leave) {
         shift = false;
-        return;
+        co_return true;
     }
 
     if(!press) {
-        return;
+        co_return true;
     }
 
     switch(keycode) {
@@ -164,16 +168,13 @@ auto Callbacks::on_keycode(const uint32_t keycode, const gawl::ButtonState state
         const auto next = keycode == KEY_SPACE || keycode == KEY_RIGHT;
 
         page = std::clamp(page + (next ? 1 : -1) * (shift ? 10 : 1), 0, int(work.images.size()) - 1);
-        loaders.event.notify_unblock();
+        loaders_event.notify();
         window->refresh();
         adjust_cache();
     } break;
     case KEY_C: {
-        {
-            auto [lock, cache] = critical_cache.access();
-            cache[page].emplace<std::thread::id>();
-        }
-        loaders.event.notify_unblock();
+        cache[page].reset();
+        loaders_event.notify();
         window->refresh();
     } break;
     case KEY_Q:
@@ -182,20 +183,12 @@ auto Callbacks::on_keycode(const uint32_t keycode, const gawl::ButtonState state
         close();
         break;
     }
-}
-
-auto Callbacks::run() -> void {
-    running = true;
-    loaders.run([this](Loader& data) { loader_main(data); });
+    co_return true;
 }
 
 Callbacks::Callbacks(hitomi::Work work, gawl::TextRender& font)
     : font(&font) {
-    auto& cache = critical_cache.unsafe_access();
     cache.resize(work.images.size());
-    for(auto& c : cache) {
-        c.emplace<std::thread::id>();
-    }
     this->work = std::move(work);
 }
 } // namespace imgview
