@@ -14,7 +14,7 @@ auto GalleryInfoDisplay::refresh(gawl::Screen& screen) -> void {
         return;
     }
 
-    auto [lock, caches] = tman->get_caches().access();
+    auto& caches = tman->get_caches();
 
     const auto& works = caches.works;
     const auto  itr   = works.find(browser->current_work);

@@ -1,5 +1,6 @@
 #pragma once
 #include <coop/generator.hpp>
+#include <coop/multi-event.hpp>
 
 #include "gawl/graphic.hpp"
 #include "gawl/wayland/window.hpp"
@@ -32,14 +33,13 @@ class ThumbnailManager {
   private:
     Caches                          caches;
     std::array<coop::TaskHandle, 8> workers;
+    coop::MultiEvent                workers_event;
 
-    auto worker_main(gawl::WaylandWindow* window) -> void;
+    auto worker_main(gawl::WaylandWindow* window) -> coop::Async<void>;
 
   public:
-    bool verbose = false;
-
     auto get_caches() -> const Caches&;
-    auto run(gawl::WaylandWindow* window) -> void;
+    auto run(gawl::WaylandWindow* window) -> coop::Async<void>;
     auto shutdown() -> void;
     auto ref(std::span<const hitomi::GalleryID> works) -> void;
     auto unref(std::span<const hitomi::GalleryID> works) -> void;

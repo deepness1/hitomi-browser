@@ -232,7 +232,7 @@ auto HitomiBrowser::init() -> bool {
         }
 
         auto on_created(gawl::Window* window) -> coop::Async<bool> {
-            browser.tman.run(std::bit_cast<gawl::WaylandWindow*>(window));
+            co_await browser.tman.run(std::bit_cast<gawl::WaylandWindow*>(window));
             browser.sman.run(std::bind(&HitomiBrowser::sman_confirm, &browser, std::placeholders::_1),
                              std::bind(&HitomiBrowser::sman_done, &browser, std::placeholders::_1, std::placeholders::_2));
 

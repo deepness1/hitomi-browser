@@ -1,155 +1,120 @@
-#include "thumbnail-manager.hpp"
+#include <coop/parallel.hpp>
+#include <coop/runner.hpp>
+#include <coop/thread.hpp>
+
 #include "global.hpp"
-#include "util/assert.hpp"
+#include "thumbnail-manager.hpp"
+#include "util/logger.hpp"
 
 namespace tman {
-auto ThumbnailManager::worker_main(gawl::WaylandWindow* window) -> void {
-    auto context = window->fork_context();
+auto logger = Logger("tman");
+
+auto ThumbnailManager::worker_main(gawl::WaylandWindow* window) -> coop::Async<void> {
 loop:
-    if(!running) {
-        return;
-    }
     // find next load target
-    auto target_id = invalid_gallery_id;
-    {
-        auto [lock, caches] = critical_caches.access();
-        if(verbose) {
-            print("cache: ", caches.works.size(), " refcounts: ", caches.refcounts.size(), " create: ", caches.create_candidates.size(), " delete: ", caches.delete_candidates.size());
-        }
-        auto& cands = caches.create_candidates;
-        if(!cands.empty()) {
-            target_id = cands[0];
-            cands.erase(cands.begin());
-            if(!caches.works.contains(target_id)) {
-                caches.works.insert({target_id, Work{.state = Work::State::Init, .work = {}, .thumbnail = {}}});
-            } else {
-                target_id = invalid_gallery_id;
-            }
-        }
-    }
-    if(target_id == invalid_gallery_id) {
-        workers.event.wait();
+    logger.debug("cache: ", caches.works.size(), " refcounts: ", caches.refcounts.size(), " create: ", caches.create_candidates.size(), " delete: ", caches.delete_candidates.size());
+    auto& cands = caches.create_candidates;
+    if(cands.empty()) {
+        co_await workers_event;
         goto loop;
     }
+    const auto target_id = cands[0];
+    cands.erase(cands.begin());
+    if(caches.works.contains(target_id)) {
+        goto loop;
+    }
+    caches.works.insert({target_id, Work{.state = Work::State::Init, .work = {}, .thumbnail = {}}});
 
     // download metadata
-    auto work  = hitomi::Work();
-    auto state = Work::State::Init;
-    do {
-        if(!work.init(target_id)) {
-            state = Work::State::Error;
-            break;
-        }
-        state = Work::State::Work;
-    } while(0);
-    {
-        auto [lock, caches] = critical_caches.access();
-        if(const auto p = caches.works.find(target_id); p != caches.works.end()) {
-            p->second.state = state;
-            p->second.work  = work;
-            browser->refresh_window();
-        }
+    auto       work = hitomi::Work();
+    const auto ret  = co_await coop::run_blocking([&work, target_id]() -> bool { return work.init(target_id); });
+    if(const auto p = caches.works.find(target_id); p != caches.works.end()) {
+        p->second.state = ret ? Work::State::Work : Work::State::Error;
+        p->second.work  = work;
+        browser->refresh_window();
     }
-    if(state != Work::State::Work) {
+    if(!ret) {
         goto loop;
     }
 
-    // download thumbnail
-    auto img = gawl::Graphic();
-    do {
-        const auto buf = work.get_thumbnail();
-        if(!buf) {
-            browser->show_message("failed to download thumbnail");
-            break;
-        }
-        const auto pixbuf = gawl::PixelBuffer::from_blob(*buf);
-        if(!pixbuf) {
-            line_warn("failed to load thumbnail");
-            break;
-        }
-        img = gawl::Graphic(*pixbuf);
-        context.wait();
-    } while(0);
-    if(!img) {
-        auto [lock, caches] = critical_caches.access();
-        if(const auto p = caches.works.find(target_id); p != caches.works.end()) {
-            p->second.state = Work::State::Error;
-        }
+    auto thumbnail = co_await coop::run_blocking([&work]() { return work.get_thumbnail(); });
+    if(!thumbnail) {
+        browser->show_message("failed to download thumbnail");
         goto loop;
     }
+    auto pixbuf = co_await coop::run_blocking([&thumbnail]() { return gawl::PixelBuffer::from_blob(*thumbnail); });
+    if(!pixbuf) {
+        logger.error("failed to load thumbnail");
+        goto loop;
+    }
+    auto image = co_await coop::run_blocking(
+        [window, &pixbuf]() {
+            auto context = window->fork_context();
+            auto image   = gawl::Graphic(*pixbuf);
+            context.wait();
+            return image;
+        });
 
     // store thumbnail cache
-    {
-        auto [lock, caches] = critical_caches.access();
-        if(const auto p = caches.works.find(target_id); p != caches.works.end()) {
-            p->second.thumbnail = std::move(img);
-            p->second.state     = Work::State::Thumbnail;
-            browser->refresh_window();
-        }
+    if(const auto p = caches.works.find(target_id); p != caches.works.end()) {
+        p->second.thumbnail = std::move(image);
+        p->second.state     = Work::State::Thumbnail;
+        browser->refresh_window();
+    }
 
-        // clear cache
-        for(auto work : std::exchange(caches.delete_candidates, {})) {
-            if(!caches.refcounts.contains(work)) {
-                caches.works.erase(work);
-            }
+    // clear cache
+    for(auto work : std::exchange(caches.delete_candidates, {})) {
+        if(!caches.refcounts.contains(work)) {
+            caches.works.erase(work);
         }
     }
 
     goto loop;
 }
 
-auto ThumbnailManager::get_caches() -> const util::Critical<Caches>& {
-    return critical_caches;
+auto ThumbnailManager::get_caches() -> const Caches& {
+    return caches;
 }
 
-auto ThumbnailManager::run(gawl::WaylandWindow* const window) -> void {
-    running = true;
-    workers.run([this, window]() { worker_main(window); });
+auto ThumbnailManager::run(gawl::WaylandWindow* const window) -> coop::Async<void> {
+    auto generators = std::vector<coop::Async<void>>(workers.size());
+    auto handles    = std::vector<coop::TaskHandle*>(workers.size());
+    for(auto i = 0u; i < workers.size(); i += 1) {
+        generators[i] = worker_main(window);
+        handles[i]    = &workers[i];
+    }
+    co_await coop::run_vec(std::move(generators)).detach(std::move(handles));
 }
 
 auto ThumbnailManager::shutdown() -> void {
-    if(std::exchange(running, false)) {
-        workers.stop();
+    for(auto& worker : workers) {
+        worker.cancel();
     }
 }
 
 auto ThumbnailManager::ref(std::span<const hitomi::GalleryID> works) -> void {
-    auto notify = false;
-    {
-        auto [lock, caches] = critical_caches.access();
-        for(const auto work : works) {
-            if(const auto p = caches.refcounts.find(work); p != caches.refcounts.end()) {
-                p->second += 1;
-                if(verbose) {
-                    print("ref ", work, " ", p->second);
-                }
-            } else {
-                if(verbose) {
-                    print("ref ", work, " 1(new)");
-                }
-                caches.refcounts.insert({work, 1});
-                caches.create_candidates.push_back(work);
-                notify = true;
-            }
+    for(const auto work : works) {
+        if(const auto p = caches.refcounts.find(work); p != caches.refcounts.end()) {
+            p->second += 1;
+            logger.debug("ref ", work, " ", p->second);
+        } else {
+            logger.debug("ref ", work, " 1(new)");
+            caches.refcounts.insert({work, 1});
+            caches.create_candidates.push_back(work);
+            workers_event.notify();
         }
-    }
-    if(notify) {
-        workers.event.notify_unblock();
     }
 }
 
 auto ThumbnailManager::unref(std::span<const hitomi::GalleryID> works) -> void {
-    auto [lock, caches] = critical_caches.access();
     for(const auto work : works) {
         const auto p = caches.refcounts.find(work);
         if(p == caches.refcounts.end() || p->second <= 0) {
-            line_warn("cache refcount bug");
+            logger.error("cache refcount bug");
             continue;
         }
         p->second -= 1;
-        if(verbose) {
-            print("unref ", work, " ", p->second);
-        }
+        logger.debug("unref ", work, " ", p->second);
         if(p->second == 0) {
             caches.delete_candidates.push_back(work);
             caches.refcounts.erase(p);
@@ -158,7 +123,6 @@ auto ThumbnailManager::unref(std::span<const hitomi::GalleryID> works) -> void {
 }
 
 auto ThumbnailManager::clear(const hitomi::GalleryID work) -> bool {
-    auto [lock, caches] = critical_caches.access();
     if(const auto p = caches.works.find(work); p != caches.works.end()) {
         caches.works.erase(p);
         caches.create_candidates.insert(caches.create_candidates.begin(), work);

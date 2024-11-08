@@ -31,7 +31,7 @@ auto GalleryTableCallbacks::on_keycode(const uint32_t key, const htk::Modifiers 
             return false;
         }
 
-        auto [lock_c, caches] = tman->get_caches().access();
+        auto& caches = tman->get_caches();
 
         switch(key) {
         case KEY_SLASH: {
@@ -117,8 +117,8 @@ auto GalleryTableCallbacks::set_index(const size_t new_index) -> void {
 }
 
 auto GalleryTableCallbacks::get_label(const size_t index) -> std::string {
-    auto [lock, caches] = tman->get_caches().access();
-    const auto id_str   = std::to_string(data->works[index]);
+    auto&      caches = tman->get_caches();
+    const auto id_str = std::to_string(data->works[index]);
     if(const auto p = caches.works.find(data->works[index]); p == caches.works.end()) {
         return id_str;
     } else {
