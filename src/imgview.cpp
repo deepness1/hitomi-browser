@@ -20,7 +20,7 @@ auto Callbacks::pickup_image_to_download() -> int {
         if(cache[i]) {
             continue;
         }
-        *cache[i] = Drawable();
+        cache[i] = Drawable();
         return i;
     }
 
@@ -39,6 +39,7 @@ loop:
         data.downloading_page = download_page;
 
         const auto& image = work.images[download_page];
+        cache[download_page].emplace<Drawable>(Drawable::create<std::string>("loading..."));
 
         data.cancel         = false;
         const auto buffer_o = co_await coop::run_blocking([&image, &data]() { return image.download(true, &data.cancel); });
@@ -137,8 +138,8 @@ auto Callbacks::on_created(gawl::Window* /*window*/) -> coop::Async<bool> {
     auto handles = std::vector<coop::TaskHandle*>(num_loaders);
     for(auto i = 0u; i < num_loaders; i += 1) {
         auto& loader = loaders[i];
-        workers.emplace_back(loader_main(loader));
-        handles.emplace_back(&loader.handle);
+        workers[i]   = loader_main(loader);
+        handles[i]   = &loader.handle;
     }
     co_await coop::run_vec(std::move(workers)).detach(std::move(handles));
     co_return true;

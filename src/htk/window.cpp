@@ -15,7 +15,6 @@ auto Callbacks::refresh() -> void {
 }
 
 auto Callbacks::close() -> void {
-    window = nullptr;
     application->quit();
 }
 

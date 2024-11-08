@@ -108,7 +108,7 @@ auto HitomiBrowser::search_in_new_tab(std::string args) -> void {
 
 auto HitomiBrowser::open_viewer(hitomi::Work work) -> void {
     const auto callbacks = std::shared_ptr<imgview::Callbacks>(new imgview::Callbacks(std::move(work), fonts.normal));
-    runner.push_task(app.run(), app.open_window({.manual_refresh = true}, callbacks));
+    runner.push_task(app.open_window({.manual_refresh = true}, callbacks));
 }
 
 auto HitomiBrowser::bookmark(std::string tab_title, const hitomi::GalleryID work) -> void {
@@ -233,8 +233,8 @@ auto HitomiBrowser::init() -> bool {
 
         auto on_created(gawl::Window* window) -> coop::Async<bool> {
             co_await browser.tman.run(std::bit_cast<gawl::WaylandWindow*>(window));
-            browser.sman.run(std::bind(&HitomiBrowser::sman_confirm, &browser, std::placeholders::_1),
-                             std::bind(&HitomiBrowser::sman_done, &browser, std::placeholders::_1, std::placeholders::_2));
+            co_await browser.sman.run(std::bind(&HitomiBrowser::sman_confirm, &browser, std::placeholders::_1),
+                                      std::bind(&HitomiBrowser::sman_done, &browser, std::placeholders::_1, std::placeholders::_2));
 
             co_return true;
         }
