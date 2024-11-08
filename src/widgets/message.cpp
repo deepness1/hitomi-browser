@@ -1,15 +1,18 @@
-#include "message.hpp"
+#include <coop/promise.hpp>
+#include <coop/runner.hpp>
+#include <coop/timer.hpp>
+
 #include "../gawl/misc.hpp"
 #include "../gawl/polygon.hpp"
 #include "../global.hpp"
 #include "../htk/draw-region.hpp"
 #include "../htk/theme.hpp"
+#include "message.hpp"
 
 namespace htk::message {
 auto Message::refresh(gawl::Screen& screen) -> void {
     child->refresh(screen);
 
-    auto [lock, message] = critical_message.access();
     if(message.empty()) {
         return;
     }
@@ -35,32 +38,23 @@ auto Message::set_region(const gawl::Rectangle& new_region) -> void {
 }
 
 auto Message::show_message(std::string new_message) -> void {
-    auto [lock, message] = critical_message.access();
-    message              = std::move(new_message);
-
-    if(timer.joinable()) {
-        timer_event.wakeup();
-        timer.join();
-    }
-    timer = std::thread([this]() {
-        if(!timer_event.wait_for(std::chrono::seconds(2))) {
-            auto [lock, message] = critical_message.access();
-            message.clear();
-            browser->refresh_window();
-        }
-    });
+    message = std::move(new_message);
+    timer.cancel();
+    const auto handles = {&timer};
+    runner->push_task(handles, [](Message& self) -> coop::Async<void> {
+        co_await coop::sleep(std::chrono::seconds(2));
+        self.message.clear();
+        browser->refresh_window();
+    }(*this));
     browser->refresh_window();
 }
 
-Message::Message(Fonts& fonts, std::shared_ptr<Widget> child)
+Message::Message(Fonts& fonts, std::shared_ptr<Widget> child, coop::Runner& runner)
     : child(std::move(child)),
-      fonts(&fonts) {}
+      fonts(&fonts),
+      runner(&runner) {}
 
 Message::~Message() {
-    if(timer.joinable()) {
-        timer_event.wakeup();
-        timer.join();
-    }
+    timer.cancel();
 };
-
 } // namespace htk::message
