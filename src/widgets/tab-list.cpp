@@ -1,10 +1,6 @@
 #include "tab-list.hpp"
 #include "../global.hpp"
 
-auto GalleryTableListCallbacks::get_mutex() -> std::mutex& {
-    return data->lock;
-}
-
 auto GalleryTableListCallbacks::get_size() -> size_t {
     return data->tabs.size();
 }
@@ -16,8 +12,7 @@ auto GalleryTableListCallbacks::get_index() -> size_t {
 auto GalleryTableListCallbacks::set_index(const size_t new_index) -> void {
     data->index = new_index;
 
-    auto&      tab  = *data->tabs[data->index];
-    const auto lock = std::lock_guard(tab.lock);
+    auto& tab = *data->tabs[data->index];
     if(!tab.works.empty()) {
         browser->current_work = tab.works[tab.index];
     } else {
@@ -30,8 +25,7 @@ auto GalleryTableListCallbacks::get_child_widget(const size_t index) -> htk::Wid
 }
 
 auto GalleryTableListCallbacks::get_label(const size_t index) -> std::string {
-    auto&      tab  = *data->tabs[index];
-    const auto lock = std::lock_guard(tab.lock);
+    auto& tab = *data->tabs[index];
     if(tab.search_id != 0) {
         return "searching...";
     } else {
@@ -49,8 +43,7 @@ auto GalleryTableListCallbacks::get_background_color(const size_t index) -> gawl
 }
 
 auto GalleryTableListCallbacks::begin_rename(const size_t index) -> bool {
-    const auto tab  = data->tabs[index];
-    const auto lock = std::lock_guard(tab->lock);
+    const auto tab = data->tabs[index];
     browser->begin_input([tab](std::string buffer) { tab->title = std::move(buffer); }, "tabname: ", tab->title, tab->title.size());
     return true;
 }

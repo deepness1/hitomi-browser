@@ -4,7 +4,6 @@
 struct GalleryTableListCallbacks : htk::tablist::Callbacks {
     Tabs* data;
 
-    auto get_mutex() -> std::mutex& override;
     auto get_size() -> size_t override;
     auto get_index() -> size_t override;
     auto set_index(size_t new_index) -> void override;

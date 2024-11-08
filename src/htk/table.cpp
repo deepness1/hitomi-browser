@@ -6,7 +6,6 @@
 #include "util/print.hpp"
 
 namespace htk::table {
-// thread safe
 auto Table::do_action(const int action) -> bool {
     switch(action) {
     case Actions::Next:
@@ -39,7 +38,6 @@ done:
     return true;
 }
 
-// thread unsafe
 // data_size >= 0
 auto Table::calc_visible_range(const size_t data_size) const -> std::pair<size_t, size_t> {
     const auto region = get_region();
@@ -54,7 +52,6 @@ auto Table::calc_visible_range(const size_t data_size) const -> std::pair<size_t
     return std::pair{range_begin, range_end};
 }
 
-// thread unsafe
 auto Table::emit_visible_range_changed() -> void {
     const auto size = callbacks->get_size();
     if(size == 0) {
@@ -64,47 +61,39 @@ auto Table::emit_visible_range_changed() -> void {
     callbacks->on_visible_range_change(begin, end);
 }
 
-// thread safe
 auto Table::set_region(const gawl::Rectangle& new_region) -> void {
     Widget::set_region(new_region);
-    const auto lock = std::lock_guard(callbacks->get_mutex());
     emit_visible_range_changed();
 }
 
-// thread safe
 auto Table::refresh(gawl::Screen& screen) -> void {
     const auto region        = get_region();
     const auto region_handle = RegionHandle(screen, region);
     gawl::draw_rect(screen, region, theme::background);
 
-    auto  size  = size_t();
-    auto  index = size_t();
-    auto& font  = fonts->normal;
-    {
-        const auto lock = std::lock_guard(callbacks->get_mutex());
+    auto& font = fonts->normal;
 
-        size = callbacks->get_size();
-        if(size == 0) {
-            return;
+    const auto size = callbacks->get_size();
+    if(size == 0) {
+        return;
+    }
+    const auto index = callbacks->get_index();
+
+    const auto [begin, end] = calc_visible_range(size);
+    const auto center       = region.a.y + region.height() / 2.0 - height / 2.0;
+    for(auto i = begin; i <= end; i += 1) {
+        const auto diff = int(i) - int(index);
+        const auto y    = center + diff * height;
+        const auto box  = gawl::Rectangle{{region.a.x, y}, {region.b.x, y + height}};
+        gawl::draw_rect(screen, box, theme::table_color[i % 2]);
+        font.draw_fit_rect(screen, box, {1, 1, 1, 1}, callbacks->get_label(i), font_size);
+
+        if(i != index) {
+            continue;
         }
-        index = callbacks->get_index();
-
-        const auto [begin, end] = calc_visible_range(size);
-        const auto center       = region.a.y + region.height() / 2.0 - height / 2.0;
-        for(auto i = begin; i <= end; i += 1) {
-            const auto diff = int(i) - int(index);
-            const auto y    = center + diff * height;
-            const auto box  = gawl::Rectangle{{region.a.x, y}, {region.b.x, y + height}};
-            gawl::draw_rect(screen, box, theme::table_color[i % 2]);
-            font.draw_fit_rect(screen, box, {1, 1, 1, 1}, callbacks->get_label(i), font_size);
-
-            if(i != index) {
-                continue;
-            }
-            auto b = box;
-            b.expand(-2, -2);
-            gawl::draw_outlines(screen, b.to_points(), {1, 1, 1, 1}, 2);
-        }
+        auto b = box;
+        b.expand(-2, -2);
+        gawl::draw_outlines(screen, b.to_points(), {1, 1, 1, 1}, 2);
     }
 
     const auto info_str  = build_string(index + 1, "/", size);
@@ -116,7 +105,6 @@ auto Table::refresh(gawl::Screen& screen) -> void {
 
 // thread safe
 auto Table::on_keycode(const uint32_t key, Modifiers mods) -> bool {
-    const auto lock = std::lock_guard(callbacks->get_mutex());
     if(callbacks->get_size() == 0) {
         return false;
     }

@@ -54,9 +54,7 @@ auto HitomiBrowser::open_new_tab(const std::string_view title, const TabType typ
 }
 
 auto HitomiBrowser::sman_confirm(size_t search_id) -> bool {
-    const auto lock = std::lock_guard(tabs.lock);
     for(auto& tab : tabs.tabs) {
-        const auto lock = std::lock_guard(tab->lock);
         if(tab->type == TabType::Search && tab->search_id == search_id) {
             return true;
         }
@@ -67,9 +65,7 @@ auto HitomiBrowser::sman_confirm(size_t search_id) -> bool {
 auto HitomiBrowser::sman_done(size_t search_id, std::vector<hitomi::GalleryID> result) -> void {
     unwrap_mut(window, window_callbacks->get_window());
 
-    const auto lock = std::lock_guard(tabs.lock);
     for(auto& tab : tabs.tabs) {
-        const auto lock = std::lock_guard(tab->lock);
         if(tab->type == TabType::Search && tab->search_id == search_id) {
             tab->search_id = 0;
             tab->set_data(std::move(result));
@@ -100,9 +96,7 @@ auto HitomiBrowser::begin_input(std::function<void(std::string)> handler, std::s
 }
 
 auto HitomiBrowser::search_in_new_tab(std::string args) -> void {
-    const auto lock_s = std::lock_guard(tabs.lock);
-    const auto tab    = open_new_tab(args, TabType::Search);
-    const auto lock_t = std::lock_guard(tab->lock);
+    const auto tab = open_new_tab(args, TabType::Search);
     tab->start_search(sman, args);
 }
 
@@ -112,8 +106,7 @@ auto HitomiBrowser::open_viewer(hitomi::Work work) -> void {
 }
 
 auto HitomiBrowser::bookmark(std::string tab_title, const hitomi::GalleryID work) -> void {
-    const auto lock   = std::lock_guard(tabs.lock);
-    auto       target = (Tab*)(nullptr);
+    auto target = (Tab*)(nullptr);
     for(auto& tab : tabs.tabs) {
         if(tab->type == TabType::Normal && tab->title == tab_title) {
             target = tab.get();
@@ -217,7 +210,7 @@ auto HitomiBrowser::init() -> bool {
     modal.reset(new htk::modal::Modal(switcher,
                                       {{htk::modal::SizeType::Relative, 1}, {0.5, 0.5}},
                                       {{htk::modal::SizeType::Fixed, 48}, {0.5, 0.5}}));
-    message.reset(new htk::message::Message(fonts, modal));
+    message.reset(new htk::message::Message(fonts, modal, runner));
 
     // open window
     class WindowCallbacks : public htk::Callbacks {

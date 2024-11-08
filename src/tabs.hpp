@@ -1,5 +1,4 @@
 #pragma once
-#include <mutex>
 #include <vector>
 
 #include "hitomi/type.hpp"
@@ -14,7 +13,6 @@ enum class TabType {
 struct Tab {
     std::shared_ptr<htk::Widget> widget;
 
-    std::mutex                     lock;
     std::vector<hitomi::GalleryID> works;
     size_t                         index = 0;
     std::string                    title;
@@ -31,7 +29,6 @@ struct Tab {
 };
 
 struct Tabs {
-    std::mutex                        lock;
     std::vector<std::shared_ptr<Tab>> tabs;
     size_t                            index;
 };

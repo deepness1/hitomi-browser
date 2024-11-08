@@ -78,8 +78,6 @@ auto TabList::set_region(const gawl::Rectangle& new_region) -> void {
     Widget::set_region(new_region);
 
     const auto child_region = calc_child_region();
-
-    const auto lock = std::lock_guard(callbacks->get_mutex());
     for(auto i = size_t(0); i < callbacks->get_size(); i += 1) {
         callbacks->get_child_widget(i)->set_region(child_region);
     }
@@ -87,10 +85,7 @@ auto TabList::set_region(const gawl::Rectangle& new_region) -> void {
 
 auto TabList::refresh(gawl::Screen& screen) -> void {
     const auto region = get_region();
-
-    const auto lock = std::lock_guard(callbacks->get_mutex());
-
-    const auto size = callbacks->get_size();
+    const auto size   = callbacks->get_size();
     if(size == 0) {
         gawl::draw_rect(screen, region, theme::background);
         return;
@@ -127,7 +122,6 @@ auto TabList::refresh(gawl::Screen& screen) -> void {
 }
 
 auto TabList::on_keycode(const uint32_t key, const Modifiers mods) -> bool {
-    const auto lock = std::lock_guard(callbacks->get_mutex());
     const auto size = callbacks->get_size();
     if(size == 0) {
         return false;

@@ -20,7 +20,6 @@ class GalleryTableCallbacks : public htk::table::Callbacks {
     auto get_current_work(const tman::Caches& caches) -> const hitomi::Work*;
 
   public:
-    auto get_mutex() -> std::mutex& override;
     auto get_size() -> size_t override;
     auto set_index(size_t new_index) -> void override;
     auto get_index() -> size_t override;

@@ -8,8 +8,6 @@
 
 namespace htk::tablist {
 struct Callbacks {
-    virtual auto get_mutex() -> std::mutex& = 0;
-    // callbacks below are called with mutex locked
     virtual auto get_size() -> size_t                           = 0;
     virtual auto get_index() -> size_t                          = 0;
     virtual auto set_index(size_t new_index) -> void            = 0;
@@ -27,7 +25,7 @@ struct Callbacks {
     virtual auto swap(size_t /*first*/, size_t /*second*/) -> void {
     }
 
-    virtual ~Callbacks(){};
+    virtual ~Callbacks() {};
 };
 
 struct Actions {

@@ -26,7 +26,6 @@ auto GalleryTableCallbacks::get_current_work(const tman::Caches& caches) -> cons
 
 auto GalleryTableCallbacks::on_keycode(const uint32_t key, const htk::Modifiers mods) -> bool {
     {
-        const auto lock_d = std::lock_guard(data->lock);
         if(data->works.empty()) {
             return false;
         }
@@ -98,10 +97,6 @@ auto GalleryTableCallbacks::on_keycode(const uint32_t key, const htk::Modifiers 
         }
     }
     return false;
-}
-
-auto GalleryTableCallbacks::get_mutex() -> std::mutex& {
-    return data->lock;
 }
 
 auto GalleryTableCallbacks::get_size() -> size_t {
