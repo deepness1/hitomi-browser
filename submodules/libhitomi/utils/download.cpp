@@ -55,7 +55,7 @@ auto task_main(const int argc, const char* const* argv) -> coop::Async<bool> {
     auto work = hitomi::Work();
     co_ensure_v(work.init(id));
     print(work.get_display_name());
-    const auto fullpath = std::filesystem::path(save_dir) / build_save_dir(work);
+    const auto fullpath = (std::filesystem::path(save_dir) / build_save_dir(work)).string();
     co_ensure_v(std::filesystem::exists(fullpath) || std::filesystem::create_directories(fullpath));
 
     // download
@@ -71,7 +71,6 @@ auto task_main(const int argc, const char* const* argv) -> coop::Async<bool> {
                 break;
             }
             auto& image = work.images[page];
-            print(savedir);
             if(!co_await coop::run_blocking([&]() {image.download(savedir, alt); return true; })) {
                 line_warn("failed to download page ", page);
             }
@@ -79,7 +78,7 @@ auto task_main(const int argc, const char* const* argv) -> coop::Async<bool> {
         co_return true;
     };
     for(auto i = 0u; i < threads; i += 1) {
-        workers[i] = worker(work, fullpath.string(), alt, index);
+        workers[i] = worker(work, fullpath, alt, index);
     }
 
     co_await coop::run_vec(std::move(workers));
