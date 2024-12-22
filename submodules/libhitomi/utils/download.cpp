@@ -35,7 +35,7 @@ auto task_main(const int argc, const char* const* argv) -> coop::Async<bool> {
     constexpr auto error_value = false;
 
     auto id       = hitomi::GalleryID();
-    auto webp     = false;
+    auto alt      = false;
     auto help     = false;
     auto threads  = size_t(8);
     auto save_dir = "downloads";
@@ -44,7 +44,7 @@ auto task_main(const int argc, const char* const* argv) -> coop::Async<bool> {
         parser.arg(&id, "ID", "numeric gallery id");
         parser.kwarg(&save_dir, {"-o", "--output"}, "PATH", "Output directory", {.state = args::State::DefaultValue});
         parser.kwarg(&threads, {"-j", "--jobs"}, "N", "Download N files in parallel", {.state = args::State::DefaultValue});
-        parser.kwflag(&webp, {"-w", "--webp"}, "Download webp compressed images if possible");
+        parser.kwflag(&alt, {"-a", "--alt"}, "Download alternative compressed images if possible");
         parser.kwflag(&help, {"-h", "--help"}, "Print this help message", {.no_error_check = true});
         if(!parser.parse(argc, argv) || help) {
             print("Usage: download ", parser.get_help());
@@ -62,7 +62,7 @@ auto task_main(const int argc, const char* const* argv) -> coop::Async<bool> {
     auto index   = size_t(0);
     auto workers = std::vector<coop::Async<bool>>(threads);
 
-    const auto worker = [](const hitomi::Work& work, const std::string_view savedir, const bool webp, size_t& index) -> coop::Async<bool> {
+    const auto worker = [](const hitomi::Work& work, const std::string savedir, const bool alt, size_t& index) -> coop::Async<bool> {
         while(true) {
             const auto page = index;
             if(index < work.images.size()) {
@@ -71,14 +71,15 @@ auto task_main(const int argc, const char* const* argv) -> coop::Async<bool> {
                 break;
             }
             auto& image = work.images[page];
-            if(!co_await coop::run_blocking([&]() {image.download(savedir, webp); return true; })) {
+            print(savedir);
+            if(!co_await coop::run_blocking([&]() {image.download(savedir, alt); return true; })) {
                 line_warn("failed to download page ", page);
             }
         }
         co_return true;
     };
     for(auto i = 0u; i < threads; i += 1) {
-        workers[i] = worker(work, fullpath.string(), webp, index);
+        workers[i] = worker(work, fullpath.string(), alt, index);
     }
 
     co_await coop::run_vec(std::move(workers));

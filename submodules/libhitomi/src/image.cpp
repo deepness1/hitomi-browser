@@ -22,7 +22,6 @@ auto Image::download(const bool alt, bool* const cancel) const -> std::optional<
 
     const auto sep     = name.find(".");
     const auto base    = name.substr(0, sep);
-    const auto ext     = alt && haswebp ? ".webp" : name.substr(sep);
     const auto referer = build_string(impl::hitomi_referer, "/reader/", id, ".html");
     while(true) {
         auto gg = impl::gg.access().second;
@@ -33,11 +32,14 @@ auto Image::download(const bool alt, bool* const cancel) const -> std::optional<
         const auto domain      = subdomain + ".hitomi.la";
 
         auto url = std::string();
-        if(alt && haswebp) {
+        if(alt && hasavif) {
             unwrap(hash_num, from_chars<int>(hash_str, 16));
-            url = build_string(domain, "/webp/", gg.b, "/", hash_num, "/", hash, ext);
+            url = build_string(domain, "/avif/", gg.b, "/", hash_num, "/", hash, ".avif");
+        } else if(alt && haswebp) {
+            unwrap(hash_num, from_chars<int>(hash_str, 16));
+            url = build_string(domain, "/webp/", gg.b, "/", hash_num, "/", hash, ".webp");
         } else {
-            url = build_string(domain, "/images/", gg.b, "/", hash_str, "/", hash, ext);
+            url = build_string(domain, "/images/", gg.b, "/", hash_str, "/", hash, name.substr(sep));
         }
 
         auto buffer = impl::download_binary(url, {.referer = referer, .timeout = 120, .cancel = cancel});
@@ -71,9 +73,16 @@ auto Image::download(const bool alt, bool* const cancel) const -> std::optional<
 auto Image::download(const std::string_view savedir, const bool alt, bool* const cancel) const -> bool {
     unwrap(buffer, download(alt, cancel));
 
-    const auto sep      = name.find(".");
-    const auto base     = name.substr(0, sep);
-    const auto ext      = alt && haswebp ? ".webp" : name.substr(sep);
+    const auto sep  = name.find(".");
+    const auto base = name.substr(0, sep);
+    auto       ext  = std::string();
+    if(alt && hasavif) {
+        ext = ".avif";
+    } else if(alt && haswebp) {
+        ext = ".webp";
+    } else {
+        ext = name.substr(sep);
+    }
     const auto filepath = std::string(savedir) + "/" + base + ext;
 
     auto file = std::ofstream(filepath, std::ios::out | std::ios::binary);
