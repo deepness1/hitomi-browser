@@ -78,7 +78,7 @@ auto task_main(const int argc, const char* const* argv) -> coop::Async<bool> {
         co_return true;
     };
     for(auto i = 0u; i < threads; i += 1) {
-        workers.emplace_back(worker(work, fullpath.string(), webp, index));
+        workers[i] = worker(work, fullpath.string(), webp, index);
     }
 
     co_await coop::run_vec(std::move(workers));
