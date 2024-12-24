@@ -43,10 +43,10 @@ auto download_binary(const std::string_view url, const DownloadParameters& param
         curl_easy_setopt(curl.get(), CURLOPT_XFERINFODATA, parameters.cancel);
         curl_easy_setopt(curl.get(), CURLOPT_NOPROGRESS, 0);
     }
-    if(!parameters.range.empty()) {
+    if(parameters.range != nullptr) {
         curl_easy_setopt(curl.get(), CURLOPT_RANGE, parameters.range);
     }
-    if(!parameters.referer.empty()) {
+    if(parameters.referer != nullptr) {
         curl_easy_setopt(curl.get(), CURLOPT_REFERER, parameters.referer);
     }
 
@@ -79,7 +79,7 @@ download:
         // Service Unavailable
         std::this_thread::sleep_for(std::chrono::seconds(retry_interval));
         buffer.clear();
-        if(!parameters.range.empty()) {
+        if(parameters.range != nullptr) {
             curl_easy_setopt(curl.get(), CURLOPT_RANGE, parameters.range);
         }
         goto download;

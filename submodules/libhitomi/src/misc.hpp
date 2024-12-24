@@ -6,10 +6,10 @@
 
 namespace hitomi::impl {
 struct DownloadParameters {
-    std::string_view range;
-    std::string_view referer;
-    int              timeout = 30;
-    bool*            cancel  = nullptr;
+    const char* range   = nullptr;
+    const char* referer = nullptr;
+    int         timeout = 30;
+    bool*       cancel  = nullptr;
 };
 
 auto download_binary(std::string_view url, const DownloadParameters& parameters) -> std::optional<std::vector<std::byte>>;

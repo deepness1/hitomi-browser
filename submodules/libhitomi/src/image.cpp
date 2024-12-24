@@ -42,7 +42,7 @@ auto Image::download(const bool alt, bool* const cancel) const -> std::optional<
             url = build_string(domain, "/images/", gg.b, "/", hash_str, "/", hash, name.substr(sep));
         }
 
-        auto buffer = impl::download_binary(url, {.referer = referer, .timeout = 120, .cancel = cancel});
+        auto buffer = impl::download_binary(url, {.referer = referer.data(), .timeout = 120, .cancel = cancel});
         if(buffer.has_value()) {
             return std::move(buffer.value());
         }
