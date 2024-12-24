@@ -45,7 +45,7 @@ auto Work::init(const GalleryID id) -> bool {
                     } else if(const auto q = v.get<json::Number>()) {
                         return q->value == 1;
                     } else {
-                        line_warn("unknown tag");
+                        WARN("unknown tag");
                         return false;
                     }
                 };

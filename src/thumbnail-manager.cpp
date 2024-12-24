@@ -3,8 +3,8 @@
 #include <coop/thread.hpp>
 
 #include "global.hpp"
+#include "macros/logger.hpp"
 #include "thumbnail-manager.hpp"
-#include "util/logger.hpp"
 
 namespace tman {
 auto logger = Logger("tman");
@@ -12,7 +12,7 @@ auto logger = Logger("tman");
 auto ThumbnailManager::worker_main(gawl::WaylandWindow* window) -> coop::Async<void> {
 loop:
     // find next load target
-    logger.debug("cache: ", caches.works.size(), " refcounts: ", caches.refcounts.size(), " create: ", caches.create_candidates.size(), " delete: ", caches.delete_candidates.size());
+    LOG_DEBUG(logger, "cache: ", caches.works.size(), " refcounts: ", caches.refcounts.size(), " create: ", caches.create_candidates.size(), " delete: ", caches.delete_candidates.size());
     auto& cands = caches.create_candidates;
     if(cands.empty()) {
         co_await workers_event;
@@ -44,7 +44,7 @@ loop:
     }
     auto pixbuf = co_await coop::run_blocking([&thumbnail]() { return gawl::PixelBuffer::from_blob(*thumbnail); });
     if(!pixbuf) {
-        logger.error("failed to load thumbnail");
+        LOG_ERROR(logger, "failed to load thumbnail");
         goto loop;
     }
     auto image = co_await coop::run_blocking(
@@ -96,9 +96,9 @@ auto ThumbnailManager::ref(std::span<const hitomi::GalleryID> works) -> void {
     for(const auto work : works) {
         if(const auto p = caches.refcounts.find(work); p != caches.refcounts.end()) {
             p->second += 1;
-            logger.debug("ref ", work, " ", p->second);
+            LOG_DEBUG(logger, "ref ", work, " ", p->second);
         } else {
-            logger.debug("ref ", work, " 1(new)");
+            LOG_DEBUG(logger, "ref ", work, " 1(new)");
             caches.refcounts.insert({work, 1});
             caches.create_candidates.push_back(work);
             workers_event.notify();
@@ -110,11 +110,11 @@ auto ThumbnailManager::unref(std::span<const hitomi::GalleryID> works) -> void {
     for(const auto work : works) {
         const auto p = caches.refcounts.find(work);
         if(p == caches.refcounts.end() || p->second <= 0) {
-            logger.error("cache refcount bug");
+            LOG_ERROR(logger, "cache refcount bug");
             continue;
         }
         p->second -= 1;
-        logger.debug("unref ", work, " ", p->second);
+        LOG_DEBUG(logger, "unref ", work, " ", p->second);
         if(p->second == 0) {
             caches.delete_candidates.push_back(work);
             caches.refcounts.erase(p);

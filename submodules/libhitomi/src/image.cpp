@@ -65,8 +65,7 @@ auto Image::download(const bool alt, bool* const cancel) const -> std::optional<
                 continue;
             }
         }
-        line_warn("failed to download ", base.data(), " from ", url.data());
-        return std::nullopt;
+        bail("failed to download ", base.data(), " from ", url.data());
     }
 }
 

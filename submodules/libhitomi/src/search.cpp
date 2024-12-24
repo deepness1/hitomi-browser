@@ -260,7 +260,7 @@ auto search(const std::span<const std::string_view> args) -> std::optional<std::
             filter(v);
         } break;
         default:
-            line_warn("invalid argument");
+            WARN("invalid argument");
             break;
         }
     }
