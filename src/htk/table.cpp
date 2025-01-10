@@ -103,7 +103,6 @@ auto Table::refresh(gawl::Screen& screen) -> void {
     font.draw_fit_rect(screen, info_box, {0.8, 0.8, 0.8, 1}, info_str, {.size = font_size});
 }
 
-// thread safe
 auto Table::on_keycode(const uint32_t key, Modifiers mods) -> bool {
     if(callbacks->get_size() == 0) {
         return false;

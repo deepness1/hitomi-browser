@@ -13,7 +13,6 @@ auto Tab::set_index(const size_t new_index) -> void {
     browser->current_work = works[index];
 }
 
-// thread unsafe
 auto Tab::set_data(std::vector<hitomi::GalleryID> new_data) -> void {
     reset_order(new_data);
     if(works.empty()) {
