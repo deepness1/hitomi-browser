@@ -108,21 +108,21 @@ auto Callbacks::refresh() -> void {
             placeholder->draw_fit_rect(*window, screen_rect);
             break;
         case Drawable::index_of<std::string>:
-            font->draw_fit_rect(*window, screen_rect, {1, 1, 1, 1}, drawable.as<std::string>(), font_size);
+            font->draw_fit_rect(*window, screen_rect, {1, 1, 1, 1}, drawable.as<std::string>(), {.size = font_size});
             break;
         }
     } else {
         if(placeholder) {
             placeholder->draw_fit_rect(*window, screen_rect);
         }
-        font->draw_fit_rect(*window, screen_rect, {1, 1, 1, 1}, "loading...", font_size);
+        font->draw_fit_rect(*window, screen_rect, {1, 1, 1, 1}, "loading...", {.size = font_size});
     }
 
     const auto str  = build_string("[", page + 1, "/", work.images.size(), "]");
     const auto rect = gawl::Rectangle(font->get_rect(*window, str, font_size)).expand(2, 2);
     const auto box  = gawl::Rectangle{{0, screen_rect.height() - rect.height()}, {rect.width(), screen_rect.height()}};
     gawl::draw_rect(*window, box, {0, 0, 0, 0.5});
-    font->draw_fit_rect(*window, box, {1, 1, 1, 0.7}, str, font_size);
+    font->draw_fit_rect(*window, box, {1, 1, 1, 0.7}, str, {.size = font_size});
 }
 
 auto Callbacks::close() -> void {

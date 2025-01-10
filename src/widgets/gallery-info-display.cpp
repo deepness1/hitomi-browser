@@ -79,7 +79,11 @@ auto GalleryInfoDisplay::refresh(gawl::Screen& screen) -> void {
     auto       info_wrapped_str = gawl::WrappedText();
     const auto info_area_a      = gawl::Point{landscape ? thumbnail_bottom : region.a.x, landscape ? region.a.y : thumbnail_bottom};
     const auto info_area        = gawl::Rectangle{info_area_a, region.b};
-    fonts->normal.draw_wrapped(screen, info_area, line_height, {1, 1, 1, 1}, info_str, info_wrapped_str, font_size, gawl::Align::Left, gawl::Align::Left);
+    fonts->normal.draw_wrapped(screen, info_area, line_height, {1, 1, 1, 1}, info_str, info_wrapped_str, {
+                                                                                                             .size    = font_size,
+                                                                                                             .align_x = gawl::Align::Left,
+                                                                                                             .align_y = gawl::Align::Left,
+                                                                                                         });
 }
 
 GalleryInfoDisplay::GalleryInfoDisplay(htk::Fonts& fonts, tman::ThumbnailManager& tman)

@@ -25,7 +25,7 @@ auto Message::refresh(gawl::Screen& screen) -> void {
     gawl::draw_rect(screen, box, theme::background);
     gawl::draw_outlines(screen, std::array{gawl::Point{region.a.x, base + 2}, gawl::Point{region.b.x, base + 2}}, {1, 1, 1, 1}, 2);
     gawl::draw_outlines(screen, std::array{gawl::Point{region.a.x, base + height - 2}, gawl::Point{region.b.x, base + height - 2}}, {1, 1, 1, 1}, 2);
-    fonts->normal.draw_fit_rect(screen, box, {1, 1, 1, 1}, message, font_size);
+    fonts->normal.draw_fit_rect(screen, box, {1, 1, 1, 1}, message, {.size = font_size});
 }
 
 auto Message::on_keycode(const uint32_t key, const Modifiers mods) -> bool {

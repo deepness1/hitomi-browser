@@ -86,7 +86,7 @@ auto Table::refresh(gawl::Screen& screen) -> void {
         const auto y    = center + diff * height;
         const auto box  = gawl::Rectangle{{region.a.x, y}, {region.b.x, y + height}};
         gawl::draw_rect(screen, box, theme::table_color[i % 2]);
-        font.draw_fit_rect(screen, box, {1, 1, 1, 1}, callbacks->get_label(i), font_size);
+        font.draw_fit_rect(screen, box, {1, 1, 1, 1}, callbacks->get_label(i), {.size = font_size});
 
         if(i != index) {
             continue;
@@ -100,7 +100,7 @@ auto Table::refresh(gawl::Screen& screen) -> void {
     const auto info_rect = font.get_rect(screen, info_str, font_size);
     const auto info_box  = gawl::Rectangle{{region.b.x - info_rect.width(), region.b.y - info_rect.height()}, region.b};
     gawl::draw_rect(screen, info_box, theme::background);
-    font.draw_fit_rect(screen, info_box, {0.8, 0.8, 0.8, 1}, info_str, font_size);
+    font.draw_fit_rect(screen, info_box, {0.8, 0.8, 0.8, 1}, info_str, {.size = font_size});
 }
 
 // thread safe

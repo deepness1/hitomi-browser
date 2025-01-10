@@ -95,7 +95,7 @@ auto Input::refresh(gawl::Screen& screen) -> void {
         }
         return false;
     };
-    font.draw_fit_rect(screen, input_area, {0.8, 0.8, 0.8, 1.0}, text, 0, gawl::Align::Left, gawl::Align::Center, cursor_render);
+    font.draw_fit_rect(screen, input_area, {0.8, 0.8, 0.8, 1.0}, text, {.align_y = gawl::Align::Center, .callback = cursor_render});
     {
         auto b = region;
         b.expand(-2, -2);
