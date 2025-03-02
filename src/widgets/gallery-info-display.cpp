@@ -3,7 +3,6 @@
 #include "../global.hpp"
 #include "../htk/draw-region.hpp"
 #include "../htk/theme.hpp"
-#include "../util/print.hpp"
 
 auto GalleryInfoDisplay::refresh(gawl::Screen& screen) -> void {
     const auto& region        = get_region();
@@ -56,7 +55,7 @@ auto GalleryInfoDisplay::refresh(gawl::Screen& screen) -> void {
     const auto& gallery  = work.work;
     auto        info_str = std::string();
     info_str += gallery.date.substr(0, 10);
-    info_str += build_string("(", gallery.images.size(), " pages)");
+    info_str += std::format("({} pages)", gallery.images.size());
     if(!gallery.language.empty()) {
         info_str += "\nlanguage: " + gallery.language;
     }

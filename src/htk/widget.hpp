@@ -1,4 +1,6 @@
 #pragma once
+#include <vector>
+
 #include "gawl/screen.hpp"
 #include "keybind.hpp"
 
@@ -24,6 +26,6 @@ class Widget {
         return region;
     }
 
-    virtual ~Widget(){};
+    virtual ~Widget() {};
 };
 } // namespace htk

@@ -1,9 +1,10 @@
-#include "table.hpp"
+#include <format>
+
 #include "draw-region.hpp"
 #include "gawl/misc.hpp"
 #include "gawl/polygon.hpp"
+#include "table.hpp"
 #include "theme.hpp"
-#include "util/print.hpp"
 
 namespace htk::table {
 auto Table::do_action(const int action) -> bool {
@@ -96,7 +97,7 @@ auto Table::refresh(gawl::Screen& screen) -> void {
         gawl::draw_outlines(screen, b.to_points(), {1, 1, 1, 1}, 2);
     }
 
-    const auto info_str  = build_string(index + 1, "/", size);
+    const auto info_str  = std::format("{}/{}", index + 1, size);
     const auto info_rect = font.get_rect(screen, info_str, font_size);
     const auto info_box  = gawl::Rectangle{{region.b.x - info_rect.width(), region.b.y - info_rect.height()}, region.b};
     gawl::draw_rect(screen, info_box, theme::background);

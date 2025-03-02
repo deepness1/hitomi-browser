@@ -1,3 +1,5 @@
+#include <chrono>
+#include <ranges>
 #include <span>
 #include <vector>
 
@@ -9,7 +11,6 @@
 #include "macros/unwrap.hpp"
 #include "misc.hpp"
 #include "type.hpp"
-#include "util/assert.hpp"
 #include "util/charconv.hpp"
 #include "util/split.hpp"
 
@@ -20,7 +21,7 @@ auto fetch_ids(const std::string_view url) -> std::optional<std::vector<GalleryI
     unwrap_mut(buffer, download_binary(url, {.referer = hitomi_referer, .timeout = 30}));
     const auto len = buffer.size() / sizeof(GalleryID);
     auto       ret = std::vector<GalleryID>(len);
-    for(auto i = size_t(0); i < len; i += 1) {
+    for(auto i = 0uz; i < len; i += 1) {
         const auto p = &buffer[i * 4];
         ret[i]       = be_to_cpu(*std::bit_cast<uint32_t*>(p));
     }
@@ -28,27 +29,27 @@ auto fetch_ids(const std::string_view url) -> std::optional<std::vector<GalleryI
 }
 
 auto fetch_by_category(const std::string_view category, const std::string_view value) -> std::optional<std::vector<GalleryID>> {
-    const auto url = build_string(search_domain, "/", category, "/", value, "-all.", search_node);
+    const auto url = std::format("{}/{}/{}-all.{}", search_domain, category, value, search_node);
     return fetch_ids(url);
 }
 
 auto fetch_by_type(const std::string_view type, const std::string_view lang) -> std::optional<std::vector<GalleryID>> {
-    const auto url = build_string(search_domain, "/", type, "/", type, "-", lang, ".", search_node);
+    const auto url = std::format("{}/{}/{}-{}.{}", search_domain, type, type, lang, search_node);
     return fetch_ids(url);
 }
 
 auto fetch_by_tag(const std::string_view tag) -> std::optional<std::vector<GalleryID>> {
     auto url = std::string();
     if(tag == "index") {
-        url = build_string(search_domain, "/", tag, "-all.", search_node);
+        url = std::format("{}/{}-all.{}", search_domain, tag, search_node);
     } else {
-        url = build_string(search_domain, "/tag/", tag, "-all.", search_node);
+        url = std::format("{}/tag/{}-all.{}", search_domain, tag, search_node);
     }
     return fetch_ids(url.data());
 }
 
 auto fetch_by_language(const std::string_view lang) -> std::optional<std::vector<GalleryID>> {
-    const auto url = build_string(search_domain, "/index-", lang, ".", search_node);
+    const auto url = std::format("{}/index-{}.{}", search_domain, lang, search_node);
     return fetch_ids(url.data());
 }
 
@@ -62,11 +63,10 @@ class Node {
     std::vector<uint64_t> subnode_addresses;
 
     static auto compare_bytes(const std::vector<std::byte>& a, const std::vector<std::byte>& b) -> int {
-        const auto min = std::min(a.size(), b.size());
-        for(auto i = size_t(0); i < min; i += 1) {
-            if(static_cast<uint8_t>(a[i]) < static_cast<uint8_t>(b[i])) {
+        for(const auto [a, b] : std::views::zip(a, b)) {
+            if(static_cast<uint8_t>(a) < static_cast<uint8_t>(b)) {
                 return -1;
-            } else if(static_cast<uint8_t>(a[i]) > static_cast<uint8_t>(b[i])) {
+            } else if(static_cast<uint8_t>(a) > static_cast<uint8_t>(b)) {
                 return 1;
             }
         }
@@ -75,9 +75,9 @@ class Node {
 
   public:
     auto locate_key(const Key& key, uint64_t& index) const -> bool {
-        index = keys.size();
-        int cmp_result;
-        for(size_t i = 0; i < keys.size(); i += 1) {
+        index           = keys.size();
+        auto cmp_result = -1;
+        for(size_t i = 0uz; i < keys.size(); i += 1) {
             const auto& k = keys[i];
             cmp_result    = compare_bytes(key, k);
             if(cmp_result <= 0) {
@@ -109,21 +109,21 @@ class Node {
         auto arr = ByteReader(bytes);
 
         const auto keys_limit = arr.read_int<uint32_t>();
-        for(auto i = size_t(0); i < keys_limit; i += 1) {
+        for(auto i = 0u; i < keys_limit; i += 1) {
             const auto key_size = arr.read_int<uint32_t>();
-            dynamic_assert(key_size <= 32, "too long key");
+            ASSERT(key_size <= 32, "too long key");
             keys.emplace_back(arr.read(key_size));
         }
 
         const auto datas_limit = arr.read_int<uint32_t>();
-        for(size_t i = 0; i < datas_limit; i += 1) {
+        for(auto i = 0u; i < datas_limit; i += 1) {
             const auto offset = arr.read_int<uint64_t>();
             const auto length = arr.read_int<uint32_t>();
             datas.emplace_back(Range{offset, offset + length - 1});
         }
 
         constexpr auto NUMBER_OF_SUBNODE_ADDRESSES = 16 + 1;
-        for(size_t i = 0; i < NUMBER_OF_SUBNODE_ADDRESSES; i += 1) {
+        for(auto i = 0u; i < NUMBER_OF_SUBNODE_ADDRESSES; i += 1) {
             const auto address = arr.read_int<uint64_t>();
             subnode_addresses.emplace_back(address);
         }
@@ -135,13 +135,13 @@ auto get_current_time() -> double {
 }
 
 auto get_index_version(const std::string_view index_name) -> std::optional<uint64_t> {
-    const auto url = build_string(search_domain, "/", index_name, "/version?_", uint64_t(get_current_time() * 1000));
+    const auto url = std::format("{}/{}/version?_{}", search_domain, index_name, get_current_time() * 1000uz);
     unwrap(buffer, download_binary(url.data(), {.referer = hitomi_referer}));
     return from_chars<uint64_t>(std::bit_cast<char*>(buffer.data()));
 }
 
 auto get_data_by_range(const std::string_view url, const Range& range) -> std::optional<std::vector<std::byte>> {
-    const auto range_str = build_string(range[0], "-", range[1]);
+    const auto range_str = std::format("{}-{}", range[0], range[1]);
     unwrap(buffer, download_binary(url, {.range = range_str.data(), .referer = hitomi_referer}));
     return buffer;
 }
@@ -149,7 +149,7 @@ auto get_data_by_range(const std::string_view url, const Range& range) -> std::o
 auto get_node_at_address(const uint64_t address, const uint64_t index_version) -> std::optional<Node> {
     constexpr auto max_node_size = 464;
 
-    const auto url = build_string(search_domain, "/galleriesindex/galleries.", index_version, ".index");
+    const auto url = std::format("{}/galleriesindex/galleries.{}.index", search_domain, index_version);
     unwrap(buffer, get_data_by_range(url, {address, address + max_node_size - 1}));
     return Node(buffer);
 }
@@ -169,7 +169,7 @@ auto search_for_key(const std::vector<std::byte>& key, const Node& node, uint64_
 }
 
 auto fetch_ids_with_range(const Range range, const uint64_t index_version) -> std::optional<std::vector<GalleryID>> {
-    const auto url = build_string(search_domain, "/galleriesindex/galleries.", index_version, ".data");
+    const auto url = std::format("{}/galleriesindex/galleries.{}.data", search_domain, index_version);
     unwrap(buffer, get_data_by_range(url, range));
 
     auto       arr                  = ByteReader(buffer);
@@ -179,7 +179,7 @@ auto fetch_ids_with_range(const Range range, const uint64_t index_version) -> st
     ensure(buffer.size() == expected_bytes, "mismatched downloaded data length");
 
     auto ids = std::vector<GalleryID>(number_of_galleryids);
-    for(auto i = size_t(0); i < number_of_galleryids; i += 1) {
+    for(auto i = 0u; i < number_of_galleryids; i += 1) {
         ids[i] = arr.read_int<uint32_t>();
     }
     return ids;
@@ -189,9 +189,9 @@ auto calc_sha256(const std::string_view string) -> std::array<std::byte, 32> {
     auto buf = std::array<std::byte, 32>();
     auto md  = EVP_get_digestbyname("SHA256");
     auto ctx = EVP_MD_CTX_new();
-    dynamic_assert(EVP_DigestInit_ex2(ctx, md, NULL));
-    dynamic_assert(EVP_DigestUpdate(ctx, string.data(), string.size()));
-    dynamic_assert(EVP_DigestFinal_ex(ctx, std::bit_cast<unsigned char*>(buf.data()), NULL));
+    ASSERT(EVP_DigestInit_ex2(ctx, md, NULL));
+    ASSERT(EVP_DigestUpdate(ctx, string.data(), string.size()));
+    ASSERT(EVP_DigestFinal_ex(ctx, std::bit_cast<unsigned char*>(buf.data()), NULL));
     EVP_MD_CTX_free(ctx);
     return buf;
 }

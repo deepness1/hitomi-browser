@@ -9,7 +9,7 @@ auto main(const int argc, const char* const argv[]) -> int {
     }
     unwrap(res, hitomi::search(args), "failed to search");
     for(const auto i : res) {
-        print(i);
+        std::println("{}", i);
     }
     return 0;
 }

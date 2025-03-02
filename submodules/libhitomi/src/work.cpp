@@ -2,7 +2,6 @@
 #include "constants.hpp"
 #include "macros/unwrap.hpp"
 #include "misc.hpp"
-#include "util/assert.hpp"
 
 namespace hitomi {
 auto Work::get_display_name() const -> const std::string& {
@@ -17,12 +16,12 @@ auto Work::get_thumbnail() -> std::optional<std::vector<std::byte>> {
 auto Work::init(const GalleryID id) -> bool {
     this->id = id;
 
-    const auto url = build_string(impl::galleries_url, "/", id, ".js");
+    const auto url = std::format("{}/{}.js", impl::galleries_url, id);
     unwrap(buffer, impl::download_binary(url, {.referer = impl::hitomi_referer}));
     const auto json_head = std::find(buffer.begin(), buffer.end(), std::byte('='));
     ensure(json_head != buffer.end(), "invalid json");
     const auto json_str = std::string_view(std::bit_cast<char*>(json_head + 1), std::bit_cast<char*>(buffer.end()));
-    unwrap(json, json::parse(json_str), "failed to parse json: ", json_str);
+    unwrap(json, json::parse(json_str), "failed to parse json: {}", json_str);
     for(auto& [key, value] : json.children) {
         if(key == "title" && value.get_index() == json::Value::index_of<json::String>) {
             title = value.as<json::String>().value;

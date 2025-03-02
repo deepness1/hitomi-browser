@@ -78,7 +78,7 @@ auto TabList::set_region(const gawl::Rectangle& new_region) -> void {
     Widget::set_region(new_region);
 
     const auto child_region = calc_child_region();
-    for(auto i = size_t(0); i < callbacks->get_size(); i += 1) {
+    for(auto i = 0uz; i < callbacks->get_size(); i += 1) {
         callbacks->get_child_widget(i)->set_region(child_region);
     }
 }

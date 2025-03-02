@@ -25,7 +25,7 @@ auto load_savedata() -> std::optional<SaveData> {
 
     auto tabs = std::vector<TabData>(tabs_size);
     tabs.resize(tabs_size);
-    for(auto i = size_t(0); i < tabs_size; i += 1) {
+    for(auto i = 0uz; i < tabs_size; i += 1) {
         auto& title = tabs[i].title;
         unwrap(title_size, file.read<uint64_t>());
         title.resize(title_size);

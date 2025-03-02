@@ -37,7 +37,7 @@ auto task_main(const int argc, const char* const* argv) -> coop::Async<bool> {
     auto id       = hitomi::GalleryID();
     auto alt      = false;
     auto help     = false;
-    auto threads  = size_t(8);
+    auto threads  = 8uz;
     auto save_dir = "downloads";
     {
         auto parser = args::Parser<hitomi::GalleryID, size_t>();
@@ -47,19 +47,19 @@ auto task_main(const int argc, const char* const* argv) -> coop::Async<bool> {
         parser.kwflag(&alt, {"-a", "--alt"}, "Download alternative compressed images if possible");
         parser.kwflag(&help, {"-h", "--help"}, "Print this help message", {.no_error_check = true});
         if(!parser.parse(argc, argv) || help) {
-            print("Usage: download ", parser.get_help());
+            std::println("Usage: download {}", parser.get_help());
             co_return true;
         }
     }
     co_ensure_v(hitomi::init_hitomi());
     auto work = hitomi::Work();
     co_ensure_v(work.init(id));
-    print(work.get_display_name());
+    std::println("{}", work.get_display_name());
     const auto fullpath = (std::filesystem::path(save_dir) / build_save_dir(work)).string();
     co_ensure_v(std::filesystem::exists(fullpath) || std::filesystem::create_directories(fullpath));
 
     // download
-    auto index   = size_t(0);
+    auto index   = 0uz;
     auto workers = std::vector<coop::Async<bool>>(threads);
 
     const auto worker = [](const hitomi::Work& work, const std::string savedir, const bool alt, size_t& index) -> coop::Async<bool> {
@@ -72,12 +72,12 @@ auto task_main(const int argc, const char* const* argv) -> coop::Async<bool> {
             }
             auto& image = work.images[page];
             if(!co_await coop::run_blocking([&]() {image.download(savedir, alt); return true; })) {
-                line_warn("failed to download page ", page);
+                WARN("failed to download page {}", page);
             }
         }
         co_return true;
     };
-    for(auto i = 0u; i < threads; i += 1) {
+    for(auto i = 0uz; i < threads; i += 1) {
         workers[i] = worker(work, fullpath, alt, index);
     }
 

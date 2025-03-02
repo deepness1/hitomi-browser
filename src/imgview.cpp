@@ -7,7 +7,6 @@
 #include "gawl/misc.hpp"
 #include "gawl/wayland/window.hpp"
 #include "imgview.hpp"
-#include "util/print.hpp"
 
 namespace imgview {
 auto Callbacks::pickup_image_to_download() -> int {
@@ -118,7 +117,7 @@ auto Callbacks::refresh() -> void {
         font->draw_fit_rect(*window, screen_rect, {1, 1, 1, 1}, "loading...", {.size = font_size});
     }
 
-    const auto str  = build_string("[", page + 1, "/", work.images.size(), "]");
+    const auto str  = std::format("[{}/{}]", page + 1, work.images.size());
     const auto rect = gawl::Rectangle(font->get_rect(*window, str, font_size)).expand(2, 2);
     const auto box  = gawl::Rectangle{{0, screen_rect.height() - rect.height()}, {rect.width(), screen_rect.height()}};
     gawl::draw_rect(*window, box, {0, 0, 0, 0.5});

@@ -1,6 +1,7 @@
 #include <linux/input.h>
 
 #include "browser.hpp"
+#include "constants.hpp"
 #include "gawl/fc.hpp"
 #include "hitomi/hitomi.hpp"
 #include "htk/input.hpp"
@@ -12,8 +13,7 @@
 
 namespace {
 auto create_fonts() -> std::optional<htk::Fonts> {
-    unwrap(font_path, gawl::find_fontpath_from_name("Noto Sans CJK JP:style=Bold"));
-    const auto emoji_font_path = "/home/mojyack/documents/fonts/seguiemj.ttf";
+    unwrap(font_path, gawl::find_fontpath_from_name(fontname));
     return htk::Fonts{.normal = gawl::TextRender({font_path, emoji_font_path}, 32)};
 }
 } // namespace
@@ -118,7 +118,7 @@ auto HitomiBrowser::bookmark(std::string tab_title, const hitomi::GalleryID work
     }
     target->append_data(work);
     last_bookmark = tab_title;
-    show_message(build_string("saved to ", tab_title));
+    show_message(std::format("saved to {}", tab_title));
 }
 
 auto HitomiBrowser::init() -> bool {

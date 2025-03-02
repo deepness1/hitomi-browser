@@ -62,10 +62,9 @@ auto key_to_char(const uint32_t key, const bool shift) -> std::optional<char> {
         {KEY_SEMICOLON, {';', ':'}},
     };
 
-    constexpr auto table_limit = sizeof(table) / sizeof(table[0]);
-    for(auto i = size_t(0); i < table_limit; i += 1) {
-        if(key == table[i].key) {
-            return table[i].chara[shift];
+    for(const auto& iter : table) {
+        if(key == iter.key) {
+            return iter.chara[shift];
         }
     }
     return std::nullopt;

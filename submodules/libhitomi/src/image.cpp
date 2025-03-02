@@ -6,13 +6,12 @@
 #include "macros/unwrap.hpp"
 #include "misc.hpp"
 #include "util/charconv.hpp"
-#include "util/print.hpp"
 
 namespace hitomi {
 auto Image::get_thumbnail_url() const -> std::string {
     const auto hash_a = hash.back();
     const auto hash_b = hash.substr(hash.size() - 3, 2);
-    return build_string(impl::thumbnail_url, "/", hash_a, "/", hash_b, "/", hash, ".webp");
+    return std::format("{}/{}/{}/{}.webp", impl::thumbnail_url, hash_a, hash_b, hash);
 }
 
 auto Image::download(const bool alt, bool* const cancel) const -> std::optional<std::vector<std::byte>> {
@@ -22,7 +21,7 @@ auto Image::download(const bool alt, bool* const cancel) const -> std::optional<
 
     const auto sep     = name.find(".");
     const auto base    = name.substr(0, sep);
-    const auto referer = build_string(impl::hitomi_referer, "/reader/", id, ".html");
+    const auto referer = std::format("{}/reader/{}.html", impl::hitomi_referer, id);
     while(true) {
         auto gg = impl::gg.access().second;
 
@@ -34,12 +33,12 @@ auto Image::download(const bool alt, bool* const cancel) const -> std::optional<
         auto url = std::string();
         if(alt && hasavif) {
             unwrap(hash_num, from_chars<int>(hash_str, 16));
-            url = build_string(domain, "/avif/", gg.b, "/", hash_num, "/", hash, ".avif");
+            url = std::format("{}/avif/{}/{}/{}.avif", domain, gg.b, hash_num, hash);
         } else if(alt && haswebp) {
             unwrap(hash_num, from_chars<int>(hash_str, 16));
-            url = build_string(domain, "/webp/", gg.b, "/", hash_num, "/", hash, ".webp");
+            url = std::format("{}/webp/{}/{}/{}.webp", domain, gg.b, hash_num, hash);
         } else {
-            url = build_string(domain, "/images/", gg.b, "/", hash_str, "/", hash, name.substr(sep));
+            url = std::format("{}/images/{}/{}/{}{}", domain, gg.b, hash_str, hash, name.substr(sep));
         }
 
         auto buffer = impl::download_binary(url, {.referer = referer.data(), .timeout = 120, .cancel = cancel});
@@ -65,7 +64,7 @@ auto Image::download(const bool alt, bool* const cancel) const -> std::optional<
                 continue;
             }
         }
-        bail("failed to download ", base.data(), " from ", url.data());
+        bail("failed to download {} from {}", base.data(), url.data());
     }
 }
 
@@ -82,7 +81,7 @@ auto Image::download(const std::string_view savedir, const bool alt, bool* const
     } else {
         ext = name.substr(sep);
     }
-    const auto filepath = std::string(savedir) + "/" + base + ext;
+    const auto filepath = std::format("{}/{}{}", savedir, base, ext);
 
     auto file = std::ofstream(filepath, std::ios::out | std::ios::binary);
     file.write(std::bit_cast<const char*>(buffer.data()), buffer.size());

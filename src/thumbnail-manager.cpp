@@ -12,7 +12,7 @@ auto logger = Logger("tman");
 auto ThumbnailManager::worker_main(gawl::WaylandWindow* window) -> coop::Async<void> {
 loop:
     // find next load target
-    LOG_DEBUG(logger, "cache: ", caches.works.size(), " refcounts: ", caches.refcounts.size(), " create: ", caches.create_candidates.size(), " delete: ", caches.delete_candidates.size());
+    LOG_DEBUG(logger, "cache={} refcounts={} create={} delete={}", caches.works.size(), caches.refcounts.size(), caches.create_candidates.size(), caches.delete_candidates.size());
     auto& cands = caches.create_candidates;
     if(cands.empty()) {
         co_await workers_event;
@@ -96,9 +96,9 @@ auto ThumbnailManager::ref(std::span<const hitomi::GalleryID> works) -> void {
     for(const auto work : works) {
         if(const auto p = caches.refcounts.find(work); p != caches.refcounts.end()) {
             p->second += 1;
-            LOG_DEBUG(logger, "ref ", work, " ", p->second);
+            LOG_DEBUG(logger, "ref {} {}", work, p->second);
         } else {
-            LOG_DEBUG(logger, "ref ", work, " 1(new)");
+            LOG_DEBUG(logger, "ref {} 1(new)", work);
             caches.refcounts.insert({work, 1});
             caches.create_candidates.push_back(work);
             workers_event.notify();
@@ -114,7 +114,7 @@ auto ThumbnailManager::unref(std::span<const hitomi::GalleryID> works) -> void {
             continue;
         }
         p->second -= 1;
-        LOG_DEBUG(logger, "unref ", work, " ", p->second);
+        LOG_DEBUG(logger, "unref {} {}", work, p->second);
         if(p->second == 0) {
             caches.delete_candidates.push_back(work);
             caches.refcounts.erase(p);
