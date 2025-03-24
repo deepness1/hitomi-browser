@@ -26,17 +26,16 @@ auto Image::download(const bool alt, bool* const cancel) const -> std::optional<
         auto gg = impl::gg.access().second;
 
         unwrap(subdomain_flag, gg.get_subdomain(hash_str));
-        const auto subdomain_a = static_cast<char>(97 + subdomain_flag);
-        const auto subdomain   = std::string{subdomain_a, 'a'};
-        const auto domain      = subdomain + ".hitomi.la";
+        const auto     subdomain = char('1' + subdomain_flag);
+        constexpr auto domain    = "gold-usergeneratedcontent.net";
 
         auto url = std::string();
         if(alt && hasavif) {
             unwrap(hash_num, from_chars<int>(hash_str, 16));
-            url = std::format("{}/avif/{}/{}/{}.avif", domain, gg.b, hash_num, hash);
+            url = std::format("a{}.{}/{}/{}/{}.avif", subdomain, domain, gg.b, hash_num, hash);
         } else if(alt && haswebp) {
             unwrap(hash_num, from_chars<int>(hash_str, 16));
-            url = std::format("{}/webp/{}/{}/{}.webp", domain, gg.b, hash_num, hash);
+            url = std::format("w{}.{}/{}/{}/{}.webp", subdomain, domain, gg.b, hash_num, hash);
         } else {
             url = std::format("{}/images/{}/{}/{}{}", domain, gg.b, hash_str, hash, name.substr(sep));
         }
