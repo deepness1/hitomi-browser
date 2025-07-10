@@ -1,6 +1,7 @@
 #include <coop/parallel.hpp>
 #include <coop/promise.hpp>
 #include <coop/runner.hpp>
+#include <coop/task-handle.hpp>
 #include <coop/thread.hpp>
 
 #include "hitomi/search.hpp"

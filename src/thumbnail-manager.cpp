@@ -1,5 +1,6 @@
 #include <coop/parallel.hpp>
 #include <coop/runner.hpp>
+#include <coop/task-handle.hpp>
 #include <coop/thread.hpp>
 
 #include "global.hpp"

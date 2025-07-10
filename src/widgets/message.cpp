@@ -1,5 +1,6 @@
 #include <coop/promise.hpp>
 #include <coop/runner.hpp>
+#include <coop/task-handle.hpp>
 #include <coop/timer.hpp>
 
 #include "../gawl/misc.hpp"

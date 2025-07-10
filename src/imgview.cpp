@@ -1,6 +1,7 @@
 #include <linux/input.h>
 
 #include <coop/parallel.hpp>
+#include <coop/task-handle.hpp>
 #include <coop/thread.hpp>
 
 #include "gawl/application.hpp"
