@@ -66,12 +66,14 @@ auto HitomiBrowser::sman_done(size_t search_id, std::vector<hitomi::GalleryID> r
     unwrap_mut(window, window_callbacks->get_window());
 
     for(auto& tab : tabs.tabs) {
-        if(tab->type == TabType::Search && tab->search_id == search_id) {
-            tab->search_id = 0;
-            tab->set_data(std::move(result));
-            window.refresh();
-            return;
+        if(tab->type != TabType::Search || tab->search_id != search_id) {
+            continue;
         }
+        tab->search_id = 0;
+        tab->set_data(std::move(result));
+        std::bit_cast<GalleryTable*>(tab->widget.get())->emit_visible_range_changed();
+        window.refresh();
+        return;
     }
     bail("unknown search result");
 }

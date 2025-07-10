@@ -34,7 +34,6 @@ class Table : public Widget {
 
     auto do_action(int action) -> bool;
     auto calc_visible_range(size_t data_size) const -> std::pair<size_t, size_t>;
-    auto emit_visible_range_changed() -> void;
 
   public:
     double height    = 32;
@@ -45,6 +44,7 @@ class Table : public Widget {
     virtual auto on_keycode(uint32_t key, Modifiers mods) -> bool override;
 
     auto init(Fonts& fonts, std::shared_ptr<Callbacks> callbacks) -> void;
+    auto emit_visible_range_changed() -> void;
 
     virtual ~Table() {}
 };

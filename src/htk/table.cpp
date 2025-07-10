@@ -53,15 +53,6 @@ auto Table::calc_visible_range(const size_t data_size) const -> std::pair<size_t
     return std::pair{range_begin, range_end};
 }
 
-auto Table::emit_visible_range_changed() -> void {
-    const auto size = callbacks->get_size();
-    if(size == 0) {
-        return;
-    }
-    const auto [begin, end] = calc_visible_range(size);
-    callbacks->on_visible_range_change(begin, end);
-}
-
 auto Table::set_region(const gawl::Rectangle& new_region) -> void {
     Widget::set_region(new_region);
     emit_visible_range_changed();
@@ -118,5 +109,14 @@ auto Table::on_keycode(const uint32_t key, Modifiers mods) -> bool {
 auto Table::init(Fonts& fonts, std::shared_ptr<Callbacks> callbacks) -> void {
     this->callbacks = std::move(callbacks);
     this->fonts     = &fonts;
+}
+
+auto Table::emit_visible_range_changed() -> void {
+    const auto size = callbacks->get_size();
+    if(size == 0) {
+        return;
+    }
+    const auto [begin, end] = calc_visible_range(size);
+    callbacks->on_visible_range_change(begin, end);
 }
 } // namespace htk::table
