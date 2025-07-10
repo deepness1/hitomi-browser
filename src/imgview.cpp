@@ -133,14 +133,10 @@ auto Callbacks::close() -> void {
 }
 
 auto Callbacks::on_created(gawl::Window* /*window*/) -> coop::Async<bool> {
-    auto workers = std::vector<coop::Async<void>>(num_loaders);
-    auto handles = std::vector<coop::TaskHandle*>(num_loaders);
-    for(auto i = 0u; i < num_loaders; i += 1) {
-        auto& loader = loaders[i];
-        workers[i]   = loader_main(loader);
-        handles[i]   = &loader.handle;
+    auto& runner = *co_await coop::reveal_runner();
+    for(auto& loader : loaders) {
+        runner.push_task(loader_main(loader), &loader.handle);
     }
-    co_await coop::run_vec(std::move(workers)).detach(std::move(handles));
     co_return true;
 }
 

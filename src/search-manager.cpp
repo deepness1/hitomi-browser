@@ -36,7 +36,7 @@ auto SearchManager::search(std::string args) -> size_t {
 }
 
 auto SearchManager::run(const ConfirmCallback confirm, const DoneCallback done) -> coop::Async<void> {
-    co_await coop::run_args(worker_main(confirm, done)).detach({&worker});
+    (co_await coop::reveal_runner())->push_task(worker_main(confirm, done), &worker);
 }
 
 auto SearchManager::shutdown() -> void {

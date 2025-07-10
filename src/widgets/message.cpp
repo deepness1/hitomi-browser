@@ -40,12 +40,13 @@ auto Message::set_region(const gawl::Rectangle& new_region) -> void {
 auto Message::show_message(std::string new_message) -> void {
     message = std::move(new_message);
     timer.cancel();
-    const auto handles = {&timer};
-    runner->push_task(handles, [](Message& self) -> coop::Async<void> {
-        co_await coop::sleep(std::chrono::seconds(2));
-        self.message.clear();
-        browser->refresh_window();
-    }(*this));
+    runner->push_task(
+        [](Message& self) -> coop::Async<void> {
+            co_await coop::sleep(std::chrono::seconds(2));
+            self.message.clear();
+            browser->refresh_window();
+        }(*this),
+        &timer);
     browser->refresh_window();
 }
 

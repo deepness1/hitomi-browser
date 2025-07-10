@@ -77,13 +77,10 @@ auto ThumbnailManager::get_caches() -> const Caches& {
 }
 
 auto ThumbnailManager::run(gawl::WaylandWindow* const window) -> coop::Async<void> {
-    auto generators = std::vector<coop::Async<void>>(workers.size());
-    auto handles    = std::vector<coop::TaskHandle*>(workers.size());
-    for(auto i = 0u; i < workers.size(); i += 1) {
-        generators[i] = worker_main(window);
-        handles[i]    = &workers[i];
+    auto& runner = *co_await coop::reveal_runner();
+    for(auto& handle : workers) {
+        runner.push_task(worker_main(window), &handle);
     }
-    co_await coop::run_vec(std::move(generators)).detach(std::move(handles));
 }
 
 auto ThumbnailManager::shutdown() -> void {

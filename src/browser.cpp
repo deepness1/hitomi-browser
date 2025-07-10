@@ -239,8 +239,8 @@ auto HitomiBrowser::init() -> bool {
 
     browser = this;
     window_callbacks.reset(new WindowCallbacks(message, *this));
-    runner.push_task(app.run(), app.open_window({.title = "hitomi-browser", .manual_refresh = true}, window_callbacks));
-
+    runner.push_task(app.run());
+    runner.push_task(app.open_window({.title = "hitomi-browser", .manual_refresh = true}, window_callbacks));
     return true;
 }
 

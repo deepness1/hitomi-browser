@@ -5,14 +5,11 @@
 #include "gawl/textrender.hpp"
 #include "gawl/window-callbacks.hpp"
 #include "hitomi/work.hpp"
-
-#define CUTIL_NS util
 #include "util/variant.hpp"
-#undef CUTIL_NS
 
 namespace imgview {
 using Graphic  = std::shared_ptr<gawl::Graphic>;
-using Drawable = util::Variant<Graphic, std::string>;
+using Drawable = Variant<Graphic, std::string>;
 
 struct Loader {
     coop::TaskHandle handle;

@@ -1,4 +1,6 @@
 #pragma once
+#include <memory>
+
 #include "widget.hpp"
 
 namespace htk::modal {

@@ -1,3 +1,6 @@
+#pragma once
+#include <memory>
+
 #include "widget.hpp"
 
 namespace htk::split {
@@ -13,7 +16,7 @@ class Split : public Widget {
     virtual auto on_keycode(uint32_t key, Modifiers mods) -> bool override;
 
     Split(std::shared_ptr<Widget> first, std::shared_ptr<Widget> second);
-    virtual ~Split(){};
+    virtual ~Split() {};
 };
 
 class VSplit : public Split {
@@ -21,7 +24,7 @@ class VSplit : public Split {
     virtual auto set_region(const gawl::Rectangle& new_region) -> void override;
 
     VSplit(std::shared_ptr<Widget> first, std::shared_ptr<Widget> second);
-    virtual ~VSplit(){};
+    virtual ~VSplit() {};
 };
 
 class HSplit : public Split {
@@ -29,6 +32,6 @@ class HSplit : public Split {
     virtual auto set_region(const gawl::Rectangle& new_region) -> void override;
 
     HSplit(std::shared_ptr<Widget> first, std::shared_ptr<Widget> second);
-    virtual ~HSplit(){};
+    virtual ~HSplit() {};
 };
 } // namespace htk::split
